@@ -24,9 +24,10 @@ async function getLeadDetail(id: string) {
 export default async function LeadDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const data = await getLeadDetail(params.id)
+  const { id } = await params
+  const data = await getLeadDetail(id)
   if (!data) notFound()
 
   const { lead, messages, qualification_answers, scheduled_relances } = data
