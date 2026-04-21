@@ -18,10 +18,11 @@ Formulaire web → lead reçu → email de qualification → conversation → sc
 |---|---|---|
 | Framework | Next.js 15 (App Router) | Backend API routes + frontend dashboard |
 | Base de données | Supabase (Postgres) | Stockage leads, messages, relances |
-| Envoi email | Resend | Envoi + réception emails inbound |
-| IA | Anthropic Claude | Parsing, génération, scoring |
+| Envoi + réception email | Resend | Envoi via API + inbound via webhook (event: email.received) |
+| IA | Anthropic Claude (claude-sonnet-4-6) | Parsing, génération, scoring |
 | Booking | Cal.com | Prise de RDV (lien simple) |
 | Hébergement | Vercel | App + cron jobs automatiques |
+| Domaine email | leadqualifie.fr | Adresse d'envoi : leads@leadqualifie.fr |
 
 ---
 
@@ -44,7 +45,7 @@ src/
     ├── leads/[id]/page.tsx     ← Fiche lead complète
     └── api/
         ├── webhook/form/       ← Reçoit les leads depuis formulaire web
-        ├── webhook/email-inbound/ ← Reçoit les réponses email (Resend Inbound)
+        ├── webhook/email-inbound/ ← Reçoit les réponses email (Resend Inbound, event: email.received)
         ├── webhook/cal/        ← Confirmation RDV Cal.com (à implémenter)
         ├── cron/relances/      ← Vercel Cron toutes les heures
         ├── leads/              ← GET liste leads
@@ -128,8 +129,10 @@ POST /api/webhook/form?client_id=xxx
 
 ```
 POST /api/webhook/email-inbound
-  1. Extrait In-Reply-To du header email
-  2. Retrouve le lead via email_thread_id (fallback: email du lead)
+Payload Resend : { type: "email.received", data: { from, subject, text, message_id, in_reply_to } }
+
+  1. Vérifie type === "email.received"
+  2. Extrait in_reply_to pour retrouver le lead (fallback: email du lead)
   3. Log le message reçu
   4. Annule les relances pending
   5. parseLeadMessage → sauvegarde les nouvelles réponses
@@ -144,7 +147,7 @@ POST /api/webhook/email-inbound
 
 ## Cron relances
 
-Vercel déclenche `GET /api/cron/relances` toutes les heures.
+Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `vercel.json`).
 
 ```
 1. Récupère les relances pending dont scheduled_at est passé
@@ -164,15 +167,35 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures.
 Copie `.env.example` → `.env` et remplis :
 
 ```
-ANTHROPIC_API_KEY       → console.anthropic.com
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY  → supabase.com > Settings > API
-RESEND_API_KEY          → resend.com > API Keys
-RESEND_FROM_EMAIL       → ex: leads@tondomaine.com
-NEXT_PUBLIC_APP_URL     → http://localhost:3000 en dev
-CRON_SECRET             → chaîne aléatoire longue
+ANTHROPIC_API_KEY          → console.anthropic.com (clé personnelle à chaque dev)
+NEXT_PUBLIC_SUPABASE_URL   → supabase.com > Settings > API (partagé équipe)
+NEXT_PUBLIC_SUPABASE_ANON_KEY → supabase.com > Settings > API (partagé équipe)
+SUPABASE_SERVICE_ROLE_KEY  → supabase.com > Settings > API (partagé équipe)
+RESEND_API_KEY             → resend.com > API Keys (partagé équipe)
+RESEND_FROM_EMAIL          → leads@leadqualifie.fr
+RESEND_WEBHOOK_SECRET      → resend.com > Webhooks > secret (partagé équipe)
+NEXT_PUBLIC_APP_URL        → http://localhost:3000 en dev
+CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 ```
+
+---
+
+## Configuration services externes
+
+### Resend
+- Domaine vérifié : `leadqualifie.fr`
+- Adresse d'envoi : `leads@leadqualifie.fr`
+- Inbound configuré : webhook `email.received` → `/api/webhook/email-inbound`
+- DNS configurés sur OVH : DKIM, SPF, MX, DMARC
+
+### Supabase
+- Projet : `fqsfqyihkagiceqbbbnd`
+- Schéma : voir `supabase/schema.sql`
+- Client démo PAC inséré en base
+
+### Vercel
+- Cron : toutes les heures → `/api/cron/relances`
+- Variables d'environnement à configurer dans le dashboard Vercel
 
 ---
 
@@ -181,15 +204,15 @@ CRON_SECRET             → chaîne aléatoire longue
 - Ne jamais pousser sur `main` directement
 - Toujours travailler sur une branche : `feat/nom`, `fix/nom`
 - Pull Request pour merger
+- Mettre à jour `ARCHITECTURE.md` dans toute PR qui change l'architecture
 
 ---
 
 ## Ce qui reste à faire (V1)
 
-- [ ] Webhook Cal.com (`/api/webhook/cal`) — confirmation RDV
-- [ ] Configurer Resend Inbound (MX records sur le domaine)
-- [ ] Insérer le premier client en base et tester le flow end-to-end
-- [ ] Déployer sur Vercel
+- [ ] Webhook Cal.com (`/api/webhook/cal`) — confirmation RDV → **ton associé**
+- [ ] Déployer sur Vercel → **Esteban**
+- [ ] Tester le flow complet end-to-end → **tous les deux**
 
 ## V2+ (hors scope MVP)
 
