@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Read(//usr/local/bin/**)",
+      "Read(//c/Users/este2/.nvm/**)",
+      "Bash(cmd.exe /c \"node --version && npm --version\")",
+      "Bash(npm install:*)",
+      "Bash(cmd.exe /c \"npm install\")",
+      "Bash(cmd.exe /c \"where node && where npm\")"
+    ]
+  }
+}
