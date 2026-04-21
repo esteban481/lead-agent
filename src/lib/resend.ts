@@ -22,7 +22,7 @@ export async function sendEmail({
     to,
     subject,
     text,
-    reply_to: replyTo,
+    replyTo: replyTo,
     headers,
   })
 
