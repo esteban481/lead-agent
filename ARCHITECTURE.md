@@ -194,8 +194,9 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 - Client démo PAC inséré en base
 
 ### Vercel
-- Cron : toutes les heures → `/api/cron/relances`
-- Variables d'environnement à configurer dans le dashboard Vercel
+- URL production : `https://lead-agent-omega-navy.vercel.app`
+- Cron : tous les jours à 9h → `/api/cron/relances`
+- Variables d'environnement configurées dans le dashboard Vercel
 
 ---
 
@@ -210,9 +211,17 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 
 ## Ce qui reste à faire (V1)
 
-- [ ] Webhook Cal.com (`/api/webhook/cal`) — confirmation RDV → **ton associé**
-- [ ] Déployer sur Vercel → **Esteban**
-- [ ] Tester le flow complet end-to-end → **tous les deux**
+- [ ] Insérer le client démo en base (Supabase SQL Editor — voir `supabase/schema.sql`)
+- [ ] Tester le flow complet end-to-end (lead → email → réponse → score → Cal.com)
+- [ ] Webhook Cal.com (`/api/webhook/cal`) — confirmation RDV → **à implémenter**
+
+## Ce qui est fait
+
+- [x] Stack complète déployée sur Vercel
+- [x] Base de données Supabase configurée
+- [x] Resend configuré (envoi + inbound sur leadqualifie.fr)
+- [x] Flow complet codé (webhook form → parsing → qualification → scoring → décision → relances)
+- [x] Dashboard interne (liste leads + fiche lead + KPIs)
 
 ## V2+ (hors scope MVP)
 
