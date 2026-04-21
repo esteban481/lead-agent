@@ -128,13 +128,20 @@ export interface FormWebhookPayload {
 // Types pour le webhook email inbound (Resend)
 // ============================================================
 export interface ResendInboundPayload {
-  from: string
-  to: string[]
-  subject: string
-  text: string
-  html?: string
-  headers: Record<string, string>
-  // Resend fournit les headers Message-ID et In-Reply-To ici
+  type: 'email.received'
+  created_at: string
+  data: {
+    email_id: string
+    created_at: string
+    from: string
+    to: string[]
+    subject: string
+    text?: string
+    html?: string
+    message_id: string
+    headers?: Record<string, string>
+    in_reply_to?: string
+  }
 }
 
 // ============================================================

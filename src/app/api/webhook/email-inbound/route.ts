@@ -17,31 +17,35 @@ import type {
 } from '@/types'
 
 // POST /api/webhook/email-inbound
-// Reçoit les réponses email du lead via Resend Inbound
+// Reçoit les réponses email du lead via Resend Inbound (event: email.received)
 export async function POST(req: NextRequest) {
   try {
     const payload: ResendInboundPayload = await req.json()
 
-    // 1. Extraire le Message-ID de référence pour retrouver le lead
-    const inReplyTo = cleanMessageId(
-      payload.headers['in-reply-to'] ?? payload.headers['In-Reply-To'] ?? ''
-    )
-    const fromEmail = extractEmail(payload.from)
+    // Vérifie que c'est bien un email reçu
+    if (payload.type !== 'email.received') {
+      return NextResponse.json({ ok: true, skipped: true })
+    }
 
-    // 2. Retrouver le lead — priorité au thread ID, fallback sur l'email
+    const { data } = payload
+    const fromEmail = extractEmail(data.from)
+    const inReplyTo = cleanMessageId(data.in_reply_to ?? '')
+    const messageText = data.text ?? ''
+
+    // 1. Retrouver le lead — priorité au In-Reply-To, fallback sur l'email
     let lead: Lead | null = null
 
     if (inReplyTo) {
-      const { data } = await supabase
+      const { data: found } = await supabase
         .from('leads')
         .select('*')
         .eq('email_thread_id', inReplyTo)
         .single()
-      lead = data as Lead | null
+      lead = found as Lead | null
     }
 
     if (!lead && fromEmail) {
-      const { data } = await supabase
+      const { data: found } = await supabase
         .from('leads')
         .select('*')
         .eq('email', fromEmail)
@@ -49,16 +53,15 @@ export async function POST(req: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
-      lead = data as Lead | null
+      lead = found as Lead | null
     }
 
     if (!lead) {
-      // Pas de lead trouvé — log et on sort proprement
       console.warn('Inbound email: no matching lead found', { inReplyTo, fromEmail })
       return NextResponse.json({ ok: true, matched: false })
     }
 
-    // 3. Charger le client
+    // 2. Charger le client
     const { data: client } = await supabase
       .from('clients')
       .select('*')
@@ -72,24 +75,25 @@ export async function POST(req: NextRequest) {
 
     const typedClient = client as Client
 
-    // 4. Log le message reçu
+    // 3. Log le message reçu
     await supabase.from('messages').insert({
       lead_id: lead.id,
       direction: 'in',
       channel: 'email',
-      subject: payload.subject,
-      body: payload.text,
+      subject: data.subject,
+      body: messageText,
       in_reply_to: inReplyTo,
+      message_id: data.message_id,
     })
 
-    // 5. Annuler les relances en attente (le lead a répondu)
+    // 4. Annuler les relances en attente
     await supabase
       .from('scheduled_relances')
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
       .eq('lead_id', lead.id)
       .eq('status', 'pending')
 
-    // 6. Charger les réponses de qualification existantes
+    // 5. Charger les réponses existantes
     const { data: existingAnswers } = await supabase
       .from('qualification_answers')
       .select('*')
@@ -97,12 +101,8 @@ export async function POST(req: NextRequest) {
 
     const answers = (existingAnswers ?? []) as QualificationAnswer[]
 
-    // 7. Parser le nouveau message pour extraire des infos
-    const parsed = await parseLeadMessage(
-      payload.text,
-      typedClient.config,
-      answers
-    )
+    // 6. Parser le message pour extraire les nouvelles infos
+    const parsed = await parseLeadMessage(messageText, typedClient.config, answers)
 
     // Sauvegarder les nouvelles réponses (sans écraser les existantes)
     const existingKeys = new Set(answers.map((a) => a.question_key))
@@ -127,13 +127,13 @@ export async function POST(req: NextRequest) {
       })),
     ]
 
-    // 8. Mettre à jour le statut
+    // 7. Mettre à jour le statut
     await supabase
       .from('leads')
       .update({ status: 'qualifying' })
       .eq('id', lead.id)
 
-    // 9. Vérifier si toutes les questions sont répondues
+    // 8. Vérifier si toutes les questions sont répondues
     const requiredKeys = new Set(
       typedClient.config.qualification_questions.map((q) => q.key)
     )
@@ -141,16 +141,12 @@ export async function POST(req: NextRequest) {
     const allAnswered = [...requiredKeys].every((k) => answeredKeys.has(k))
 
     if (allAnswered) {
-      // 10a. Toutes les infos collectées → score + décision
-      await supabase
-        .from('leads')
-        .update({ status: 'scoring' })
-        .eq('id', lead.id)
+      // 9a. Toutes les infos collectées → score + décision
+      await supabase.from('leads').update({ status: 'scoring' }).eq('id', lead.id)
 
       const scoreResult = await scoreLead(lead, allAnswers, typedClient.config)
       const decision = decideNextAction(lead, scoreResult, allAnswers, typedClient.config)
 
-      // Sauvegarder le score
       await supabase
         .from('leads')
         .update({
@@ -163,35 +159,28 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', lead.id)
 
-      // Envoyer l'email selon la décision
-      if (decision.action === 'send_booking_link') {
+      if (decision.action === 'send_booking_link' || decision.action === 'send_gentle_followup') {
         const { subject, body } = await generateBookingEmail(
           lead,
           typedClient.config,
           scoreResult.summary
         )
         await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
+
+        if (decision.action === 'send_gentle_followup') {
+          await supabase.from('scheduled_relances').insert({
+            lead_id: lead.id,
+            step: 2,
+            scheduled_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
+            status: 'pending',
+          })
+        }
       } else if (decision.action === 'disqualify') {
         const { subject, body } = await generateDisqualificationEmail(lead, decision.reason)
         await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
-      } else if (decision.action === 'send_gentle_followup') {
-        // Score C : envoyer quand même le lien mais avec un ton moins pressant
-        const { subject, body } = await generateBookingEmail(
-          lead,
-          typedClient.config,
-          scoreResult.summary
-        )
-        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
-        // Replanifier une relance pour dans 3 jours
-        await supabase.from('scheduled_relances').insert({
-          lead_id: lead.id,
-          step: 2,
-          scheduled_at: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(),
-          status: 'pending',
-        })
       }
     } else {
-      // 10b. Il manque encore des infos → poser la question suivante
+      // 9b. Il manque encore des infos → question suivante
       const { subject, body } = await generateQualificationEmail(
         lead,
         allAnswers,
@@ -199,7 +188,6 @@ export async function POST(req: NextRequest) {
       )
       await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
 
-      // Replanifier une relance si le lead ne répond plus
       await supabase.from('scheduled_relances').insert({
         lead_id: lead.id,
         step: 1,
