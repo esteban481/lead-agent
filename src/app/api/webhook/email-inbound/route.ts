@@ -169,7 +169,8 @@ export async function POST(req: NextRequest) {
       await supabase.from('leads').update({ status: 'scoring' }).eq('id', lead.id)
 
       const scoreResult = await scoreLead(lead, allAnswers, typedClient.config)
-      const decision = decideNextAction(lead, scoreResult, allAnswers, typedClient.config)
+      // On force missing_fields à [] car on sait que toutes les questions sont répondues
+      const decision = decideNextAction(lead, { ...scoreResult, missing_fields: [] }, allAnswers, typedClient.config)
 
       await supabase
         .from('leads')
