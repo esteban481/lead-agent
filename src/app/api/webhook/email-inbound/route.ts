@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
           const full = await res.json()
           console.log('[inbound] fetched text:', (full.text ?? '').slice(0, 200))
           messageText = full.text ?? full.html?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ?? ''
+          // Extraire in_reply_to depuis les headers si absent du payload
+          if (!inReplyTo && full.headers) {
+            const raw = full.headers['In-Reply-To'] ?? full.headers['in-reply-to'] ?? ''
+            if (raw) inReplyTo = cleanMessageId(raw)
+            console.log('[inbound] in_reply_to from headers:', inReplyTo)
+          }
         } else {
           const err = await res.text()
           console.warn('[inbound] Resend API error:', res.status, err)
