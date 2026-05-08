@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
         from: typedClient.config.from_email,
         subject,
         text: body,
+        replyTo: process.env.RESEND_INBOUND_EMAIL ?? typedClient.config.from_email,
         headers: { 'Message-ID': `<${messageId}>` },
       })
 

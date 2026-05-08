@@ -98,6 +98,7 @@ export async function GET(req: NextRequest) {
         from: typedClient.config.from_email,
         subject,
         text: body,
+        replyTo: process.env.RESEND_INBOUND_EMAIL ?? typedClient.config.from_email,
       })
 
       // Log le message
