@@ -30,7 +30,22 @@ export async function POST(req: NextRequest) {
     const { data } = payload
     const fromEmail = extractEmail(data.from)
     const inReplyTo = cleanMessageId(data.in_reply_to ?? '')
-    const messageText = data.text ?? ''
+
+    // Le webhook Resend n'inclut pas le body — il faut le fetcher séparément
+    let messageText = data.text ?? ''
+    if (!messageText && data.email_id) {
+      try {
+        const res = await fetch(`https://api.resend.com/emails/receiving/${data.email_id}`, {
+          headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+        })
+        if (res.ok) {
+          const full = await res.json()
+          messageText = full.text ?? full.html?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ?? ''
+        }
+      } catch (err) {
+        console.warn('Failed to fetch email content from Resend API:', err)
+      }
+    }
 
     // 1. Retrouver le lead — priorité au In-Reply-To, fallback sur l'email
     let lead: Lead | null = null
@@ -223,7 +238,8 @@ async function sendAndLogEmail(
   subject: string,
   body: string
 ) {
-  const { id: resendId } = await sendEmail({ to, from, subject, text: body })
+  const replyTo = process.env.RESEND_INBOUND_EMAIL ?? from
+  const { id: resendId } = await sendEmail({ to, from, subject, text: body, replyTo })
   await supabase.from('messages').insert({
     lead_id: leadId,
     direction: 'out',
