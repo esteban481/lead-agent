@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { data } = payload
     const fromEmail = extractEmail(data.from)
-    const inReplyTo = cleanMessageId(data.in_reply_to ?? '')
+    let inReplyTo = cleanMessageId(data.in_reply_to ?? '')
 
     // Le webhook Resend n'inclut pas le body — il faut le fetcher séparément
     let messageText = data.text ?? ''
