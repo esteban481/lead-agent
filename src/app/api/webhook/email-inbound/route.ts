@@ -33,19 +33,28 @@ export async function POST(req: NextRequest) {
 
     // Le webhook Resend n'inclut pas le body — il faut le fetcher séparément
     let messageText = data.text ?? ''
-    if (!messageText && data.email_id) {
+    console.log('[inbound] email_id:', data.email_id, 'text preview:', messageText.slice(0, 100))
+
+    if (data.email_id) {
       try {
         const res = await fetch(`https://api.resend.com/emails/receiving/${data.email_id}`, {
           headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
         })
+        console.log('[inbound] Resend API status:', res.status)
         if (res.ok) {
           const full = await res.json()
+          console.log('[inbound] fetched text:', (full.text ?? '').slice(0, 200))
           messageText = full.text ?? full.html?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ?? ''
+        } else {
+          const err = await res.text()
+          console.warn('[inbound] Resend API error:', res.status, err)
         }
       } catch (err) {
-        console.warn('Failed to fetch email content from Resend API:', err)
+        console.warn('[inbound] Failed to fetch email content:', err)
       }
     }
+
+    console.log('[inbound] final messageText:', messageText.slice(0, 200))
 
     // 1. Retrouver le lead — priorité au In-Reply-To, fallback sur l'email
     let lead: Lead | null = null
