@@ -63,8 +63,19 @@ new → awaiting_reply → qualifying → scoring → booked
 
 ### Rattachement email inbound
 
-Priorité 1 : `in_reply_to` → `leads.email_thread_id`
-Priorité 2 : email du lead → `leads.email` (fallback)
+Priorité 1 : lead ID encodé dans l'adresse `to` (`leads+{uuid}@flenaavios.resend.app`)
+Priorité 2 : `in_reply_to` extrait des headers de l'email fetché → `leads.email_thread_id`
+Priorité 3 : email du lead → `leads.email` (fallback)
+
+**Important :** Le webhook Resend n'inclut pas le body de l'email. Il faut faire un GET séparé sur `api.resend.com/emails/receiving/{email_id}` pour récupérer le texte. Le `RESEND_API_KEY` doit avoir les droits **Full Access** (pas juste "sending").
+
+### Workaround inbound custom domain
+
+`leads@leadqualifie.fr` retourne encore "Relay access denied" côté AWS SES de Resend (problème de provisioning de leur côté). Workaround actuel : utiliser `leads@flenaavios.resend.app` comme adresse de reply-to via la variable `RESEND_INBOUND_EMAIL`.
+
+Le lead ID est encodé dans le replyTo : `leads+{lead_id}@flenaavios.resend.app` → parsing regex dans le webhook inbound pour retrouver le bon lead.
+
+**Quand Resend règle le problème :** changer `RESEND_INBOUND_EMAIL` dans Vercel de `leads@flenaavios.resend.app` → `leads@leadqualifie.fr`, redéployer. Aucun changement de code nécessaire.
 
 ### Multi-tenant
 
@@ -120,8 +131,9 @@ ANTHROPIC_API_KEY          → console.anthropic.com (clé personnelle à chaque
 NEXT_PUBLIC_SUPABASE_URL   → partagé équipe
 NEXT_PUBLIC_SUPABASE_ANON_KEY → partagé équipe
 SUPABASE_SERVICE_ROLE_KEY  → partagé équipe (server-side uniquement, jamais exposé client)
-RESEND_API_KEY             → partagé équipe
+RESEND_API_KEY             → partagé équipe (doit être Full Access, pas juste sending)
 RESEND_FROM_EMAIL          → leads@leadqualifie.fr
+RESEND_INBOUND_EMAIL       → leads@flenaavios.resend.app (workaround temporaire, voir section workaround)
 RESEND_WEBHOOK_SECRET      → partagé équipe
 NEXT_PUBLIC_APP_URL        → http://localhost:3000 en dev
 CRON_SECRET                → partagé équipe
@@ -131,9 +143,10 @@ CRON_SECRET                → partagé équipe
 
 ## Ce qui reste à faire (V1)
 
-- [ ] `POST /api/webhook/cal` — confirmation RDV Cal.com → mettre à jour `leads.status = booked`, annuler relances
-- [ ] Insérer client démo en base (voir `supabase/schema.sql` section INSERT commentée)
-- [ ] Tester le flow end-to-end avec un vrai lead
+- [x] `POST /api/webhook/cal` — implémenté, webhook configuré sur Cal.com
+- [x] Flow end-to-end testé et fonctionnel
+- [ ] Fixer le custom domain inbound Resend (`leads@leadqualifie.fr`) — problème côté Resend/AWS SES, contacter leur support
+- [ ] Vrai client à onboarder — insérer config dans Supabase SQL Editor
 
 ## V2+ (hors scope MVP)
 
