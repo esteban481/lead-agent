@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         from: typedClient.config.from_email,
         subject,
         text: body,
-        replyTo: process.env.RESEND_INBOUND_EMAIL ?? typedClient.config.from_email,
+        replyTo: buildReplyTo(typedLead.id),
         headers: { 'Message-ID': `<${messageId}>` },
       })
 
@@ -164,6 +164,12 @@ export async function POST(req: NextRequest) {
 // ============================================================
 // Helpers
 // ============================================================
+
+function buildReplyTo(leadId: string): string {
+  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
+  const at = base.lastIndexOf('@')
+  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
+}
 
 function normalizeEmail(email?: string): string | null {
   if (!email) return null

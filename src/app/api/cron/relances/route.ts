@@ -4,6 +4,12 @@ import { sendEmail } from '@/lib/resend'
 import { generateRelanceEmail } from '@/lib/ai/generate'
 import type { Client, Lead, ScheduledRelance } from '@/types'
 
+function buildReplyTo(leadId: string): string {
+  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
+  const at = base.lastIndexOf('@')
+  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
+}
+
 // GET /api/cron/relances
 // Déclenché par Vercel Cron toutes les heures
 // vercel.json: { "crons": [{ "path": "/api/cron/relances", "schedule": "0 * * * *" }] }
@@ -98,7 +104,7 @@ export async function GET(req: NextRequest) {
         from: typedClient.config.from_email,
         subject,
         text: body,
-        replyTo: process.env.RESEND_INBOUND_EMAIL ?? typedClient.config.from_email,
+        replyTo: buildReplyTo(lead.id),
       })
 
       // Log le message

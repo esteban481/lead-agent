@@ -62,10 +62,26 @@ export async function POST(req: NextRequest) {
 
     console.log('[inbound] final messageText:', messageText.slice(0, 200))
 
-    // 1. Retrouver le lead — priorité au In-Reply-To, fallback sur l'email
+    // 1. Retrouver le lead
+    // Priorité 1 : ID encodé dans l'adresse to (leads+{id}@...)
+    // Priorité 2 : In-Reply-To → email_thread_id
+    // Priorité 3 : email du lead (fallback)
     let lead: Lead | null = null
 
-    if (inReplyTo) {
+    const toAddress = (data.to ?? [])[0] ?? ''
+    const leadIdFromTo = toAddress.match(/\+([0-9a-f-]{36})@/i)?.[1]
+    console.log('[inbound] to:', toAddress, 'leadId:', leadIdFromTo)
+
+    if (leadIdFromTo) {
+      const { data: found } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadIdFromTo)
+        .single()
+      lead = found as Lead | null
+    }
+
+    if (!lead && inReplyTo) {
       const { data: found } = await supabase
         .from('leads')
         .select('*')
@@ -247,6 +263,12 @@ function extractEmail(from: string): string | null {
   return match ? match[1].toLowerCase() : null
 }
 
+function buildReplyTo(leadId: string): string {
+  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
+  const at = base.lastIndexOf('@')
+  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
+}
+
 async function sendAndLogEmail(
   leadId: string,
   to: string,
@@ -254,7 +276,7 @@ async function sendAndLogEmail(
   subject: string,
   body: string
 ) {
-  const replyTo = process.env.RESEND_INBOUND_EMAIL ?? from
+  const replyTo = buildReplyTo(leadId)
   const { id: resendId } = await sendEmail({ to, from, subject, text: body, replyTo })
   await supabase.from('messages').insert({
     lead_id: leadId,
