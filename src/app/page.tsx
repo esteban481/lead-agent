@@ -1,5 +1,7 @@
 import Link from 'next/link'
-import type { DashboardStats, Lead } from '@/types'
+import { getLeads, getStats } from '@/lib/queries'
+
+export const dynamic = 'force-dynamic'
 
 const CATEGORY_COLORS: Record<string, string> = {
   A: 'bg-green-100 text-green-800',
@@ -26,23 +28,6 @@ const STATUS_COLORS: Record<string, string> = {
   booked: 'bg-green-100 text-green-800',
   disqualified: 'bg-red-100 text-red-700',
   cold: 'bg-gray-100 text-gray-500',
-}
-
-async function getLeads(): Promise<Lead[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/leads?limit=100`, {
-    cache: 'no-store',
-  })
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.leads ?? []
-}
-
-async function getStats(): Promise<DashboardStats | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/stats`, { cache: 'no-store' })
-  if (!res.ok) return null
-  return res.json()
 }
 
 export default async function DashboardPage() {

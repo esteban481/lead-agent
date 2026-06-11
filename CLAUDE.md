@@ -134,7 +134,10 @@ SUPABASE_SERVICE_ROLE_KEY  → partagé équipe (server-side uniquement, jamais 
 RESEND_API_KEY             → partagé équipe (doit être Full Access, pas juste sending)
 RESEND_FROM_EMAIL          → leads@leadqualifie.fr
 RESEND_INBOUND_EMAIL       → leads@flenaavios.resend.app (workaround temporaire, voir section workaround)
-RESEND_WEBHOOK_SECRET      → partagé équipe
+RESEND_WEBHOOK_SECRET      → partagé équipe (vérification signature Svix webhook inbound)
+CAL_WEBHOOK_SECRET         → secret webhook Cal.com (vérification signature)
+DASHBOARD_USER             → identifiant Basic Auth dashboard (défaut: admin)
+DASHBOARD_PASSWORD         → mot de passe Basic Auth dashboard (si absent : dashboard ouvert + warning)
 NEXT_PUBLIC_APP_URL        → http://localhost:3000 en dev
 CRON_SECRET                → partagé équipe
 ```

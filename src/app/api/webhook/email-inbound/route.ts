@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
+import { verifyResendWebhook } from '@/lib/webhook-security'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { scoreLead } from '@/lib/ai/score'
 import { decideNextAction } from '@/lib/ai/decide'
@@ -20,7 +21,16 @@ import type {
 // Reçoit les réponses email du lead via Resend Inbound (event: email.received)
 export async function POST(req: NextRequest) {
   try {
-    const payload: ResendInboundPayload = await req.json()
+    // La signature svix est calculée sur le body brut — le lire avant de parser
+    const rawBody = await req.text()
+
+    const verification = verifyResendWebhook(rawBody, req.headers)
+    if (!verification.valid) {
+      console.warn('[inbound] webhook rejeté:', verification.reason)
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const payload: ResendInboundPayload = JSON.parse(rawBody)
 
     // Vérifie que c'est bien un email reçu
     if (payload.type !== 'email.received') {

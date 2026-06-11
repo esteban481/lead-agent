@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { verifyCalWebhook } from '@/lib/webhook-security'
 
 // POST /api/webhook/cal
 // Reçoit les confirmations de RDV depuis Cal.com
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    // La signature est calculée sur le body brut — le lire avant de parser
+    const rawBody = await req.text()
+
+    const verification = verifyCalWebhook(rawBody, req.headers)
+    if (!verification.valid) {
+      console.warn('[cal] webhook rejeté:', verification.reason)
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const body = JSON.parse(rawBody)
 
     if (body.triggerEvent !== 'BOOKING_CREATED') {
       return NextResponse.json({ ok: true, skipped: true })
