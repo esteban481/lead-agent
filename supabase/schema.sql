@@ -43,7 +43,8 @@ create table clients (
 --   "score_threshold_hot": 75,
 --   "relance_hours": { "start": 8, "end": 20 },
 --   "cal_booking_url": "https://cal.com/xxx/15min",
---   "from_email": "leads@tondomaine.com"
+--   "from_email": "leads@tondomaine.com",
+--   "notify_email": "commercial@entreprise-cliente.com"  -- optionnel : alertes lead chaud / RDV
 -- }
 
 -- ============================================================

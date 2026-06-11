@@ -79,7 +79,11 @@ Le lead ID est encodé dans le replyTo : `leads+{lead_id}@flenaavios.resend.app`
 
 ### Multi-tenant
 
-Chaque lead est lié à un `client_id`. Config client en JSONB dans `clients.config` (zone, questions, seuils, cal_booking_url, from_email). Pas d'UI self-serve V1 — insertion manuelle via Supabase SQL Editor.
+Chaque lead est lié à un `client_id`. Config client en JSONB dans `clients.config` (zone, questions, seuils, cal_booking_url, from_email, notify_email). Pas d'UI self-serve V1 — insertion manuelle via Supabase SQL Editor.
+
+### Alertes commercial
+
+Si `config.notify_email` est renseigné : alerte email au commercial sur lead chaud (scoré A/B) et sur RDV confirmé (webhook Cal.com). Voir `src/lib/notify.ts` — no-op si absent, n'interrompt jamais le flux principal.
 
 ---
 

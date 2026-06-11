@@ -38,6 +38,7 @@ src/
 │   ├── anthropic.ts            ← Client Anthropic + fonction callClaude()
 │   ├── queries.ts              ← Requêtes dashboard partagées (server components)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
+│   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
@@ -246,10 +247,20 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 - [x] Flow complet codé (webhook form → parsing → qualification → scoring → décision → relances)
 - [x] Dashboard interne (liste leads + fiche lead + KPIs)
 
+## Alertes commercial
+
+Si `config.notify_email` est renseigné pour un client, un email d'alerte est envoyé au commercial :
+- **Lead chaud** : quand un lead est scoré A ou B (au moment où le lien de RDV lui est envoyé)
+- **RDV confirmé** : quand le webhook Cal.com confirme une réservation
+
+Implémenté dans `src/lib/notify.ts`. No-op si `notify_email` absent. Un échec d'alerte ne bloque jamais le flux principal.
+
+---
+
 ## V2+ (hors scope MVP)
 
 - SMS (Twilio)
 - Multi-source leads (Meta Ads, Google)
 - UI d'onboarding client self-serve
 - Multi-calendar (Outlook)
-- Alertes Slack/email au commercial
+- Alertes Slack au commercial (email : fait)
