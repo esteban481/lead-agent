@@ -39,6 +39,7 @@ src/
 │   ├── queries.ts              ← Requêtes dashboard partagées (server components)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
+│   ├── email-utils.ts          ← buildReplyTo (lead ID encodé en plus-addressing)
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
