@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
 import { generateRelanceEmail } from '@/lib/ai/generate'
+import { buildReplyTo } from '@/lib/email-utils'
 import type { Client, Lead, ScheduledRelance } from '@/types'
-
-function buildReplyTo(leadId: string): string {
-  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
-  const at = base.lastIndexOf('@')
-  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
-}
 
 // GET /api/cron/relances
 // Déclenché par Vercel Cron toutes les heures

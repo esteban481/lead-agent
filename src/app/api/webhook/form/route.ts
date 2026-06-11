@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
+import { buildReplyTo } from '@/lib/email-utils'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { generateQualificationEmail } from '@/lib/ai/generate'
 import type { Client, FormWebhookPayload, Lead } from '@/types'
@@ -164,12 +165,6 @@ export async function POST(req: NextRequest) {
 // ============================================================
 // Helpers
 // ============================================================
-
-function buildReplyTo(leadId: string): string {
-  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
-  const at = base.lastIndexOf('@')
-  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
-}
 
 function normalizeEmail(email?: string): string | null {
   if (!email) return null

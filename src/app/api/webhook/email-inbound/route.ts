@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
 import { verifyResendWebhook } from '@/lib/webhook-security'
+import { buildReplyTo } from '@/lib/email-utils'
 import { notifyCommercial } from '@/lib/notify'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { scoreLead } from '@/lib/ai/score'
@@ -287,12 +288,6 @@ function cleanMessageId(raw: string): string {
 function extractEmail(from: string): string | null {
   const match = from.match(/<([^>]+)>/) ?? from.match(/([^\s]+@[^\s]+)/)
   return match ? match[1].toLowerCase() : null
-}
-
-function buildReplyTo(leadId: string): string {
-  const base = process.env.RESEND_INBOUND_EMAIL ?? 'leads@leadqualifie.fr'
-  const at = base.lastIndexOf('@')
-  return `${base.slice(0, at)}+${leadId}@${base.slice(at + 1)}`
 }
 
 async function sendAndLogEmail(
