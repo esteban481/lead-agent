@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyCalWebhook } from '@/lib/webhook-security'
+import { notifyCommercial } from '@/lib/notify'
+import type { Client, Lead } from '@/types'
 
 // POST /api/webhook/cal
 // Reçoit les confirmations de RDV depuis Cal.com
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
     // Trouver le lead par email
     const { data: lead, error } = await supabase
       .from('leads')
-      .select('id')
+      .select('*')
       .eq('email', attendeeEmail)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -42,6 +44,8 @@ export async function POST(req: NextRequest) {
       console.warn('Cal webhook: no lead found for email', attendeeEmail)
       return NextResponse.json({ ok: true, matched: false })
     }
+
+    const typedLead = lead as Lead
 
     // Mettre à jour le lead
     await supabase
@@ -58,6 +62,25 @@ export async function POST(req: NextRequest) {
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
       .eq('lead_id', lead.id)
       .eq('status', 'pending')
+
+    // Alerter le commercial que le RDV est confirmé
+    const { data: client } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', typedLead.client_id)
+      .single()
+
+    if (client) {
+      const rdvDate = startTime
+        ? new Date(startTime).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })
+        : 'date inconnue'
+      await notifyCommercial(
+        (client as Client).config,
+        typedLead,
+        `RDV confirmé — ${typedLead.name ?? typedLead.email}`,
+        [`Le prospect vient de réserver un rendez-vous le ${rdvDate}.`]
+      )
+    }
 
     console.log('Cal webhook: lead booked', lead.id, startTime)
     return NextResponse.json({ ok: true, lead_id: lead.id })

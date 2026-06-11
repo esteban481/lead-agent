@@ -45,6 +45,8 @@ export interface ClientConfig {
   relance_hours: { start: number; end: number }
   cal_booking_url: string
   from_email: string
+  // Email du commercial à alerter (lead chaud, RDV confirmé). Optionnel.
+  notify_email?: string
 }
 
 // ============================================================

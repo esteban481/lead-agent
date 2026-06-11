@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
 import { verifyResendWebhook } from '@/lib/webhook-security'
+import { notifyCommercial } from '@/lib/notify'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { scoreLead } from '@/lib/ai/score'
 import { decideNextAction } from '@/lib/ai/decide'
@@ -223,6 +224,21 @@ export async function POST(req: NextRequest) {
           scoreResult.summary
         )
         await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
+
+        // Alerte le commercial sur les leads chauds (A/B)
+        if (scoreResult.category === 'A' || scoreResult.category === 'B') {
+          await notifyCommercial(
+            typedClient.config,
+            lead,
+            `Lead chaud ${scoreResult.category} (${scoreResult.score}/100) — ${lead.name ?? lead.email}`,
+            [
+              `Un lead vient d'être qualifié ${scoreResult.category} (score ${scoreResult.score}/100).`,
+              `Le lien de prise de RDV vient de lui être envoyé.`,
+              '',
+              `Résumé : ${scoreResult.summary}`,
+            ]
+          )
+        }
 
         if (decision.action === 'send_gentle_followup') {
           await supabase.from('scheduled_relances').insert({
