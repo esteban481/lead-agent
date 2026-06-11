@@ -1,24 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import type { Lead, Message, QualificationAnswer, ScheduledRelance } from '@/types'
+import { getLeadDetail } from '@/lib/queries'
+
+export const dynamic = 'force-dynamic'
 
 const CATEGORY_COLORS: Record<string, string> = {
   A: 'bg-green-100 text-green-800',
   B: 'bg-blue-100 text-blue-800',
   C: 'bg-yellow-100 text-yellow-800',
   D: 'bg-red-100 text-red-800',
-}
-
-async function getLeadDetail(id: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/leads/${id}`, { cache: 'no-store' })
-  if (!res.ok) return null
-  return res.json() as Promise<{
-    lead: Lead
-    messages: Message[]
-    qualification_answers: QualificationAnswer[]
-    scheduled_relances: ScheduledRelance[]
-  }>
 }
 
 export default async function LeadDetailPage({
