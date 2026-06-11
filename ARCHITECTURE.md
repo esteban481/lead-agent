@@ -31,10 +31,13 @@ Formulaire web → lead reçu → email de qualification → conversation → sc
 ```
 src/
 ├── types/index.ts              ← Tous les types TypeScript centralisés
+├── middleware.ts               ← Basic Auth sur dashboard + APIs de lecture
 ├── lib/
 │   ├── supabase.ts             ← Client Supabase (service role, server-side uniquement)
 │   ├── resend.ts               ← Client Resend + fonction sendEmail()
 │   ├── anthropic.ts            ← Client Anthropic + fonction callClaude()
+│   ├── queries.ts              ← Requêtes dashboard partagées (server components)
+│   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
@@ -162,6 +165,22 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `v
 
 ---
 
+## Sécurité
+
+| Surface | Protection |
+|---|---|
+| `POST /api/webhook/email-inbound` | Signature Svix (`RESEND_WEBHOOK_SECRET`) — anti-replay 5 min |
+| `POST /api/webhook/cal` | Signature HMAC-SHA256 (`CAL_WEBHOOK_SECRET`, header `x-cal-signature-256`) |
+| `GET /api/cron/relances` | `Authorization: Bearer CRON_SECRET` |
+| Dashboard (`/`, `/leads/*`) + `GET /api/leads*`, `/api/stats` | Basic Auth via `src/middleware.ts` (`DASHBOARD_USER` / `DASHBOARD_PASSWORD`) |
+| `POST /api/webhook/form` | Public par design (reçoit les formulaires web) — déduplication 7 jours |
+
+**Comportement dégradé volontaire :** si un secret n'est pas configuré dans l'environnement, la vérification correspondante est ignorée avec un warning dans les logs. Cela permet de déployer sans casser la prod, mais les secrets doivent être configurés dans Vercel au plus vite.
+
+Les pages du dashboard sont des server components qui appellent `src/lib/queries.ts` directement (requêtes Supabase) — pas de fetch HTTP vers notre propre API.
+
+---
+
 ## Variables d'environnement nécessaires
 
 Copie `.env.example` → `.env` et remplis :
@@ -173,7 +192,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY → supabase.com > Settings > API (partagé équip
 SUPABASE_SERVICE_ROLE_KEY  → supabase.com > Settings > API (partagé équipe)
 RESEND_API_KEY             → resend.com > API Keys (partagé équipe)
 RESEND_FROM_EMAIL          → leads@leadqualifie.fr
+RESEND_INBOUND_EMAIL       → leads@flenaavios.resend.app (workaround temporaire)
 RESEND_WEBHOOK_SECRET      → resend.com > Webhooks > secret (partagé équipe)
+CAL_WEBHOOK_SECRET         → cal.com > Settings > Webhooks > secret
+DASHBOARD_USER             → identifiant Basic Auth dashboard (défaut: admin)
+DASHBOARD_PASSWORD         → mot de passe Basic Auth dashboard
 NEXT_PUBLIC_APP_URL        → http://localhost:3000 en dev
 CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 ```
