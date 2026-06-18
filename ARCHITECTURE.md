@@ -35,7 +35,7 @@ src/
 ├── lib/
 │   ├── supabase.ts             ← Client Supabase (service role, server-side uniquement)
 │   ├── resend.ts               ← Client Resend + fonction sendEmail()
-│   ├── anthropic.ts            ← Client Anthropic + fonction callClaude()
+│   ├── anthropic.ts            ← Client Anthropic + callClaude() (retries auto sur erreurs transitoires)
 │   ├── queries.ts              ← Requêtes dashboard partagées (server components)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
@@ -110,6 +110,9 @@ Génère le bon email selon le contexte. Toujours en JSON `{ subject, body }`.
 - category D → `disqualify`
 - category A ou B → `send_booking_link`
 - category C → `send_gentle_followup`
+
+### Robustesse des appels Claude
+`callClaude` (`src/lib/anthropic.ts`) s'appuie sur les retries natifs du SDK (4 tentatives, backoff exponentiel, respect du `retry-after`) pour absorber les erreurs transitoires (429, 529 overloaded, 5xx). En cas d'échec définitif, l'erreur est loggée et propagée → le webhook renvoie 500, le provider rejoue, et l'idempotence (`processed_webhooks`) rend ce rejeu sûr.
 
 ---
 
