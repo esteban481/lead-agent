@@ -38,6 +38,7 @@ src/
 │   ├── anthropic.ts            ← Client Anthropic + fonction callClaude()
 │   ├── queries.ts              ← Requêtes dashboard partagées (server components)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
+│   ├── idempotency.ts          ← Garde anti-doublons des webhooks (table processed_webhooks)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
 │   ├── email-utils.ts          ← buildReplyTo (lead ID encodé en plus-addressing)
 │   └── ai/
@@ -88,6 +89,9 @@ Ex : `{ question_key: "surface", answer: "120m2" }`
 ### `scheduled_relances`
 File de relances planifiées. Steps : 1 (J+1), 2 (J+3), 3 (J+7).
 Statuts : `pending` → `sent` | `cancelled`.
+
+### `processed_webhooks`
+Clés d'idempotence (`{source}:{event_id}`) pour ne pas traiter 2× le même event Resend/Cal.com. Voir `supabase/migrations/001_processed_webhooks.sql`. Le code dégrade gracieusement si la table n'existe pas (warning, pas de dédup).
 
 ---
 

@@ -169,6 +169,18 @@ create index relances_pending_idx on scheduled_relances(status, scheduled_at)
   where status = 'pending';
 
 -- ============================================================
+-- PROCESSED WEBHOOKS
+-- Clés d'idempotence pour ne pas traiter 2× le même event
+-- (Resend / Cal.com peuvent livrer en double). Voir
+-- supabase/migrations/001_processed_webhooks.sql
+-- ============================================================
+create table processed_webhooks (
+  id          text primary key,        -- "{source}:{event_id}"
+  source      text not null,           -- 'resend_inbound' | 'cal'
+  created_at  timestamptz not null default now()
+);
+
+-- ============================================================
 -- CLIENT DE DÉMO (à adapter)
 -- À insérer après avoir créé ton projet Supabase
 -- ============================================================
