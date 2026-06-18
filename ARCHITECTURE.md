@@ -41,6 +41,7 @@ src/
 │   ├── idempotency.ts          ← Garde anti-doublons des webhooks (table processed_webhooks)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
 │   ├── email-utils.ts          ← buildReplyTo (lead ID encodé en plus-addressing)
+│   ├── time.ts                 ← Heure locale par fuseau (DST) pour la plage de relances
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
@@ -162,7 +163,7 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `v
 1. Récupère les relances pending dont scheduled_at est passé
 2. Pour chaque relance :
    - Skip si lead déjà booked/disqualified/cold/qualifying
-   - Skip si heure hors plage config (ex: 8h-20h)
+   - Skip si heure hors plage config (ex: 8h-20h) — heure locale `Europe/Paris`, DST géré via `src/lib/time.ts`
    - generateRelanceEmail (step 1, 2 ou 3)
    - Envoie + log en DB
    - Marque relance: sent
