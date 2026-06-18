@@ -12,11 +12,20 @@ export const anthropic = new Anthropic({
   timeout: 30_000,
 })
 
-export async function callClaude(prompt: string): Promise<string> {
+interface CallClaudeOptions {
+  // 0 = sortie la plus déterministe (parsing/scoring) ; défaut SDK sinon (génération d'emails)
+  temperature?: number
+}
+
+export async function callClaude(
+  prompt: string,
+  options: CallClaudeOptions = {}
+): Promise<string> {
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 1024,
+      temperature: options.temperature,
       messages: [{ role: 'user', content: prompt }],
     })
 

@@ -100,6 +100,7 @@ Ex : `{ type_logement: "maison", surface: "120m2" }`
 ### `scoreLead(lead, answers, config)`
 Calcule un score sur 100 selon les critères du client.
 Retourne : `{ score, category, details, summary, missing_fields }`
+**Répartition des rôles** : Claude attribue des points par critère (température 0), le **code** somme, clampe chaque critère à son poids et dérive la catégorie via les seuils. Garantit `score = somme(details)` et une catégorie cohérente, indépendamment de l'arithmétique du LLM. Helpers purs testés : `computeScore`, `categoryFromScore`.
 
 ### `generateQualificationEmail / generateRelanceEmail / generateBookingEmail / generateDisqualificationEmail`
 Génère le bon email selon le contexte. Toujours en JSON `{ subject, body }`.
