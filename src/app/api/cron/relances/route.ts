@@ -3,7 +3,11 @@ import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
 import { generateRelanceEmail } from '@/lib/ai/generate'
 import { buildReplyTo } from '@/lib/email-utils'
+import { getHourInTimeZone } from '@/lib/time'
 import type { Client, Lead, ScheduledRelance } from '@/types'
+
+// Fuseau de référence pour la plage horaire des relances (config client en heures locales France)
+const RELANCE_TIMEZONE = 'Europe/Paris'
 
 // GET /api/cron/relances
 // Déclenché par Vercel Cron toutes les heures
@@ -77,8 +81,8 @@ export async function GET(req: NextRequest) {
 
     const typedClient = client as Client
 
-    // 3. Vérifier les horaires autorisés
-    const currentHour = now.getUTCHours() + 1 // UTC+1 approximatif (France)
+    // 3. Vérifier les horaires autorisés (heure locale France, DST géré)
+    const currentHour = getHourInTimeZone(now, RELANCE_TIMEZONE)
     const { start, end } = typedClient.config.relance_hours
     if (currentHour < start || currentHour >= end) {
       // Pas dans la plage horaire — on repousse à la prochaine heure autorisée
