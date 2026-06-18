@@ -15,3 +15,7 @@ out/
 *.pem
 npm-debug.log*
 .vercel
+
+# Secrets / fichiers sensibles à ne jamais commiter
+recovery-codes.txt
+*.local
