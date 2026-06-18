@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
 import { verifyResendWebhook } from '@/lib/webhook-security'
+import { claimWebhook, releaseWebhook } from '@/lib/idempotency'
 import { buildReplyTo } from '@/lib/email-utils'
 import { notifyCommercial } from '@/lib/notify'
 import { parseLeadMessage } from '@/lib/ai/parse'
@@ -22,6 +23,9 @@ import type {
 // POST /api/webhook/email-inbound
 // Reçoit les réponses email du lead via Resend Inbound (event: email.received)
 export async function POST(req: NextRequest) {
+  // Id de l'event réservé pour l'idempotence — libéré si le traitement échoue
+  let claimedEventId: string | null = null
+
   try {
     // La signature svix est calculée sur le body brut — le lire avant de parser
     const rawBody = await req.text()
@@ -40,6 +44,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { data } = payload
+
+    // Idempotence : ne pas re-traiter un email déjà reçu (double-delivery Resend)
+    const claim = await claimWebhook('resend_inbound', data.email_id)
+    if (claim === 'duplicate') {
+      console.log('[inbound] event déjà traité, ignoré:', data.email_id)
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
+    if (claim === 'new') claimedEventId = data.email_id
     const fromEmail = extractEmail(data.from)
     let inReplyTo = cleanMessageId(data.in_reply_to ?? '')
 
@@ -273,6 +285,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, lead_id: lead.id })
   } catch (err) {
     console.error('Webhook email-inbound error:', err)
+    // Libère la clé d'idempotence pour qu'un retry de Resend puisse rejouer
+    if (claimedEventId) await releaseWebhook('resend_inbound', claimedEventId)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
