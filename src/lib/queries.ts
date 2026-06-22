@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
+import { computeAnalytics } from '@/lib/analytics'
 import type {
+  ConversionAnalytics,
   DashboardStats,
   Lead,
   Message,
@@ -53,6 +55,39 @@ export async function getStats(): Promise<DashboardStats | null> {
     avg_response_time_minutes: null,
     by_category: byCategory,
   }
+}
+
+export async function getAnalytics(): Promise<ConversionAnalytics | null> {
+  // Leads + premiers messages sortants (pour le temps de 1er contact)
+  const [{ data: leads, error: leadsError }, { data: outMessages, error: msgError }] =
+    await Promise.all([
+      supabase
+        .from('leads')
+        .select('id, status, score_category, created_at, meeting_booked_at'),
+      supabase
+        .from('messages')
+        .select('lead_id, sent_at')
+        .eq('direction', 'out')
+        .order('sent_at', { ascending: true }),
+    ])
+
+  if (leadsError || msgError) {
+    console.error('getAnalytics error:', leadsError ?? msgError)
+    return null
+  }
+
+  // 1er message sortant par lead (messages déjà triés par sent_at asc)
+  const firstOutboundByLead: Record<string, string> = {}
+  for (const m of outMessages ?? []) {
+    if (m.lead_id && !firstOutboundByLead[m.lead_id]) {
+      firstOutboundByLead[m.lead_id] = m.sent_at
+    }
+  }
+
+  return computeAnalytics(
+    (leads ?? []) as Parameters<typeof computeAnalytics>[0],
+    firstOutboundByLead
+  )
 }
 
 export async function getLeadDetail(id: string): Promise<{

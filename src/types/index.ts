@@ -195,3 +195,30 @@ export interface DashboardStats {
   avg_response_time_minutes: number | null
   by_category: { A: number; B: number; C: number; D: number }
 }
+
+// ============================================================
+// Analytics de conversion (dashboard)
+// ============================================================
+export interface ConversionFunnel {
+  received: number
+  contacted: number
+  qualified: number
+  booked: number
+}
+
+export interface ConversionRates {
+  // null quand le dénominateur est 0 (pas encore de données)
+  contact_rate: number | null // contacted / received
+  qualification_rate: number | null // qualified / contacted
+  booking_rate: number | null // booked / qualified
+  overall_conversion: number | null // booked / received
+}
+
+export interface ConversionAnalytics {
+  funnel: ConversionFunnel
+  rates: ConversionRates
+  avg_minutes_to_first_contact: number | null // rapidité de l'agent (created_at → 1er email envoyé)
+  avg_hours_to_booking: number | null // created_at → RDV confirmé
+  cold: number
+  disqualified: number
+}

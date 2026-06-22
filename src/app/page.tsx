@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getLeads, getStats } from '@/lib/queries'
+import { getLeads, getStats, getAnalytics } from '@/lib/queries'
+import type { ConversionAnalytics } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,19 +32,16 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function DashboardPage() {
-  const [leads, stats] = await Promise.all([getLeads(), getStats()])
+  const [leads, stats, analytics] = await Promise.all([
+    getLeads(),
+    getStats(),
+    getAnalytics(),
+  ])
 
   return (
     <div className="space-y-8">
-      {/* KPIs */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Leads reçus" value={stats.total_leads} />
-          <StatCard label="Contactés" value={stats.leads_contacted} />
-          <StatCard label="Qualifiés" value={stats.leads_qualified} />
-          <StatCard label="RDV pris" value={stats.leads_booked} highlight />
-        </div>
-      )}
+      {/* Conversion : funnel + métriques clés */}
+      {analytics && <ConversionSection analytics={analytics} />}
 
       {/* Répartition par catégorie */}
       {stats && (
@@ -130,7 +128,7 @@ function StatCard({
   highlight = false,
 }: {
   label: string
-  value: number
+  value: number | string
   highlight?: boolean
 }) {
   return (
@@ -143,4 +141,77 @@ function StatCard({
       <div className="text-sm text-gray-500 mt-1">{label}</div>
     </div>
   )
+}
+
+// ============================================================
+// Section conversion : funnel + métriques clés
+// ============================================================
+function ConversionSection({ analytics }: { analytics: ConversionAnalytics }) {
+  const { funnel, rates } = analytics
+
+  const steps = [
+    { label: 'Reçus', value: funnel.received, rate: null as number | null },
+    { label: 'Contactés', value: funnel.contacted, rate: rates.contact_rate },
+    { label: 'Qualifiés', value: funnel.qualified, rate: rates.qualification_rate },
+    { label: 'RDV pris', value: funnel.booked, rate: rates.booking_rate },
+  ]
+  const max = Math.max(funnel.received, 1)
+
+  return (
+    <div className="space-y-4">
+      {/* Funnel */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="text-base font-semibold mb-4">Conversion</h2>
+        <div className="space-y-2">
+          {steps.map((step, i) => (
+            <div key={step.label} className="flex items-center gap-3">
+              <div className="w-24 text-sm text-gray-600 shrink-0">{step.label}</div>
+              <div className="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden">
+                <div
+                  className={`h-full rounded-full flex items-center px-3 text-sm font-medium text-white ${
+                    i === steps.length - 1 ? 'bg-green-600' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.max((step.value / max) * 100, 8)}%` }}
+                >
+                  {step.value}
+                </div>
+              </div>
+              <div className="w-20 text-right text-sm text-gray-400 shrink-0">
+                {step.rate === null ? '' : `${formatRate(step.rate)} →`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Métriques clés */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard
+          label="Conversion globale"
+          value={formatRate(rates.overall_conversion)}
+          highlight
+        />
+        <StatCard label="Temps de 1er contact" value={formatMinutes(analytics.avg_minutes_to_first_contact)} />
+        <StatCard label="Délai moyen jusqu'au RDV" value={formatHours(analytics.avg_hours_to_booking)} />
+        <StatCard label="Perdus (froids + disqualifiés)" value={`${analytics.cold + analytics.disqualified}`} />
+      </div>
+    </div>
+  )
+}
+
+function formatRate(r: number | null): string {
+  return r === null ? '—' : `${Math.round(r * 100)}%`
+}
+
+function formatMinutes(m: number | null): string {
+  if (m === null) return '—'
+  if (m < 1) return '< 1 min'
+  if (m < 60) return `${m} min`
+  return `${(m / 60).toFixed(1)} h`
+}
+
+function formatHours(h: number | null): string {
+  if (h === null) return '—'
+  if (h < 48) return `${h} h`
+  return `${Math.round(h / 24)} j`
 }

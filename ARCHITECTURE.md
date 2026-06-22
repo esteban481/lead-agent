@@ -37,6 +37,7 @@ src/
 │   ├── resend.ts               ← Client Resend + fonction sendEmail()
 │   ├── anthropic.ts            ← Client Anthropic + callClaude() (retries auto sur erreurs transitoires)
 │   ├── queries.ts              ← Requêtes dashboard partagées (server components)
+│   ├── analytics.ts            ← computeAnalytics : funnel + taux + temps (logique pure)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   ├── idempotency.ts          ← Garde anti-doublons des webhooks (table processed_webhooks)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
@@ -189,6 +190,12 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `v
 **Comportement dégradé volontaire :** si un secret n'est pas configuré dans l'environnement, la vérification correspondante est ignorée avec un warning dans les logs. Cela permet de déployer sans casser la prod, mais les secrets doivent être configurés dans Vercel au plus vite.
 
 Les pages du dashboard sont des server components qui appellent `src/lib/queries.ts` directement (requêtes Supabase) — pas de fetch HTTP vers notre propre API.
+
+---
+
+## Dashboard de conversion
+
+Le dashboard (`/`) affiche un **funnel** Reçus → Contactés → Qualifiés → RDV pris avec les taux de conversion inter-étapes, plus : conversion globale, temps moyen de 1er contact (rapidité de l'agent), délai moyen jusqu'au RDV, et leads perdus (froids + disqualifiés). Calcul dans `src/lib/analytics.ts` (`computeAnalytics`, logique pure et testée) ; récupération des données dans `getAnalytics` (`src/lib/queries.ts`). Aucun changement de schéma — tout est dérivé des tables `leads` et `messages`.
 
 ---
 
