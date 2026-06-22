@@ -1,40 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifySession, SESSION_COOKIE } from '@/lib/session'
 
 // ============================================================
-// Basic Auth sur le dashboard et les APIs de lecture.
-// Les webhooks et le cron ont leur propre mécanisme (signature,
-// CRON_SECRET) et ne passent pas par ici (voir matcher).
+// Garde d'accès au dashboard + APIs de lecture (multi-tenant).
 //
-// Si DASHBOARD_PASSWORD n'est pas configuré, l'accès reste
-// ouvert (avec warning) pour ne pas casser un déploiement
-// existant — à configurer dans Vercel dès que possible.
+// Vérifie le cookie de session signé (posé au login). Si absent
+// ou invalide :
+//   - page  → redirige vers /login?next=...
+//   - API   → 401 JSON
+//
+// Si valide, injecte x-role / x-client-id sur la requête transmise
+// (après avoir supprimé toute valeur entrante, pour qu'un client
+// ne puisse pas usurper le scope d'un autre). Les server components
+// et les API lisent ces en-têtes via getPrincipal() / req.headers.
+//
+// Les webhooks et le cron ne passent pas par ici (voir matcher) :
+// ils ont leur propre vérification (signature, CRON_SECRET).
+// /login et /api/auth/* sont hors matcher → publics.
 // ============================================================
 
-export function middleware(req: NextRequest) {
-  const password = process.env.DASHBOARD_PASSWORD
-  if (!password) {
-    console.warn('[middleware] DASHBOARD_PASSWORD non configuré — dashboard ouvert')
-    return NextResponse.next()
-  }
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  const secret = process.env.SESSION_SECRET
 
-  const expectedUser = process.env.DASHBOARD_USER ?? 'admin'
-  const authHeader = req.headers.get('authorization')
+  const token = req.cookies.get(SESSION_COOKIE)?.value
+  const session = secret ? await verifySession(token, secret) : null
 
-  if (authHeader?.startsWith('Basic ')) {
-    try {
-      const [user, pass] = atob(authHeader.slice(6)).split(':')
-      if (user === expectedUser && pass === password) {
-        return NextResponse.next()
-      }
-    } catch {
-      // header malformé → 401 ci-dessous
+  if (!session) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const url = req.nextUrl.clone()
+    url.pathname = '/login'
+    url.search = ''
+    url.searchParams.set('next', pathname)
+    return NextResponse.redirect(url)
   }
 
-  return new NextResponse('Authentification requise', {
-    status: 401,
-    headers: { 'WWW-Authenticate': 'Basic realm="Lead Agent Dashboard"' },
-  })
+  // En-têtes de confiance : on efface toute valeur entrante avant de poser la nôtre
+  const headers = new Headers(req.headers)
+  headers.delete('x-role')
+  headers.delete('x-client-id')
+  headers.set('x-role', session.role)
+  if (session.client_id) headers.set('x-client-id', session.client_id)
+
+  return NextResponse.next({ request: { headers } })
 }
 
 export const config = {
