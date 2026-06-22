@@ -198,7 +198,11 @@ Deux rôles, résolus à la connexion (`POST /api/auth/login`) :
 
 Le login pose un **cookie de session signé HMAC** (`src/lib/session.ts`) contenant `{role, client_id}`. Le middleware le vérifie à chaque requête (sans accès DB) et injecte `x-role`/`x-client-id` sur la requête transmise, après avoir **supprimé toute valeur entrante** (un client ne peut pas usurper le scope d'un autre via un header forgé). Les server components lisent ce contexte via `getPrincipal()` (`src/lib/auth.ts`) ; toutes les requêtes (`getLeads`, `getStats`, `getAnalytics`, `getLeadDetail`) sont scopées par `client_id`, avec **garde anti-IDOR** sur la fiche lead. Déconnexion : `POST /api/auth/logout`.
 
-Provisionner un client : exécuter `supabase/migrations/002_client_logins.sql` puis renseigner `login_email` + `login_password_salt`/`login_password_hash` (PBKDF2) sur la ligne `clients`.
+Provisionner un login client (sans calculer le hash à la main) :
+```bash
+node scripts/provision-client-login.mjs <email> <motdepasse> <client_id>
+```
+Le script sort un bloc SQL (migration 002 incluse, idempotente) à coller dans Supabase SQL Editor. Le hash PBKDF2 généré est identique à celui calculé par `src/lib/password.ts` (vérifié), donc le login fonctionne directement.
 
 **Comportement dégradé volontaire :** si un secret n'est pas configuré dans l'environnement, la vérification correspondante est ignorée avec un warning dans les logs. Cela permet de déployer sans casser la prod, mais les secrets doivent être configurés dans Vercel au plus vite.
 
