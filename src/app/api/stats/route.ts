@@ -4,7 +4,9 @@ import type { DashboardStats } from '@/types'
 
 // GET /api/stats?client_id=xxx
 export async function GET(req: NextRequest) {
-  const clientId = req.nextUrl.searchParams.get('client_id')
+  // Scope de session posé par le middleware (client) ; sinon param admin
+  const sessionClientId = req.headers.get('x-client-id')
+  const clientId = sessionClientId ?? req.nextUrl.searchParams.get('client_id')
 
   let query = supabase.from('leads').select('status, score_category, created_at')
   if (clientId) query = query.eq('client_id', clientId)

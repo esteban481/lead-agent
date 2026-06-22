@@ -14,13 +14,16 @@ import type {
 // server components (pas de fetch HTTP vers notre propre API).
 // ============================================================
 
-export async function getLeads(limit = 100): Promise<Lead[]> {
-  const { data, error } = await supabase
+// clientId : null = admin (tous les leads), sinon scope sur ce client
+export async function getLeads(clientId: string | null = null, limit = 100): Promise<Lead[]> {
+  let query = supabase
     .from('leads')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(limit)
+  if (clientId) query = query.eq('client_id', clientId)
 
+  const { data, error } = await query
   if (error) {
     console.error('getLeads error:', error)
     return []
@@ -28,10 +31,10 @@ export async function getLeads(limit = 100): Promise<Lead[]> {
   return (data ?? []) as Lead[]
 }
 
-export async function getStats(): Promise<DashboardStats | null> {
-  const { data: leads, error } = await supabase
-    .from('leads')
-    .select('status, score_category, created_at')
+export async function getStats(clientId: string | null = null): Promise<DashboardStats | null> {
+  let query = supabase.from('leads').select('status, score_category, created_at')
+  if (clientId) query = query.eq('client_id', clientId)
+  const { data: leads, error } = await query
 
   if (error) {
     console.error('getStats error:', error)
@@ -57,19 +60,22 @@ export async function getStats(): Promise<DashboardStats | null> {
   }
 }
 
-export async function getAnalytics(): Promise<ConversionAnalytics | null> {
-  // Leads + premiers messages sortants (pour le temps de 1er contact)
+export async function getAnalytics(clientId: string | null = null): Promise<ConversionAnalytics | null> {
+  let leadsQuery = supabase
+    .from('leads')
+    .select('id, status, score_category, created_at, meeting_booked_at')
+  if (clientId) leadsQuery = leadsQuery.eq('client_id', clientId)
+
+  // Messages sortants des leads de ce scope uniquement (jointure implicite via lead_id)
+  let msgQuery = supabase
+    .from('messages')
+    .select('lead_id, sent_at, leads!inner(client_id)')
+    .eq('direction', 'out')
+    .order('sent_at', { ascending: true })
+  if (clientId) msgQuery = msgQuery.eq('leads.client_id', clientId)
+
   const [{ data: leads, error: leadsError }, { data: outMessages, error: msgError }] =
-    await Promise.all([
-      supabase
-        .from('leads')
-        .select('id, status, score_category, created_at, meeting_booked_at'),
-      supabase
-        .from('messages')
-        .select('lead_id, sent_at')
-        .eq('direction', 'out')
-        .order('sent_at', { ascending: true }),
-    ])
+    await Promise.all([leadsQuery, msgQuery])
 
   if (leadsError || msgError) {
     console.error('getAnalytics error:', leadsError ?? msgError)
@@ -90,7 +96,10 @@ export async function getAnalytics(): Promise<ConversionAnalytics | null> {
   )
 }
 
-export async function getLeadDetail(id: string): Promise<{
+export async function getLeadDetail(
+  id: string,
+  clientId: string | null = null
+): Promise<{
   lead: Lead
   messages: Message[]
   qualification_answers: QualificationAnswer[]
@@ -103,6 +112,10 @@ export async function getLeadDetail(id: string): Promise<{
     .single()
 
   if (error || !lead) return null
+
+  // Garde anti-IDOR : un client ne peut pas ouvrir le lead d'un autre
+  // en devinant l'UUID. L'admin (clientId null) n'est pas restreint.
+  if (clientId && (lead as Lead).client_id !== clientId) return null
 
   const [{ data: messages }, { data: answers }, { data: relances }] =
     await Promise.all([

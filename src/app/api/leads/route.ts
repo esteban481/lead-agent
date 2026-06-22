@@ -4,7 +4,9 @@ import { supabase } from '@/lib/supabase'
 // GET /api/leads?client_id=xxx&status=xxx&limit=50&offset=0
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const clientId = searchParams.get('client_id')
+  // Scope de session posé par le middleware (client) ; sinon param admin
+  const sessionClientId = req.headers.get('x-client-id')
+  const clientId = sessionClientId ?? searchParams.get('client_id')
   const status = searchParams.get('status')
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
   const offset = parseInt(searchParams.get('offset') ?? '0')

@@ -58,6 +58,10 @@ export interface Client {
   sector: string
   config: ClientConfig
   created_at: string
+  // Identifiants de connexion dashboard (optionnels, provisionnés manuellement)
+  login_email?: string | null
+  login_password_hash?: string | null
+  login_password_salt?: string | null
 }
 
 export interface Lead {

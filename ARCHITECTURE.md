@@ -31,12 +31,15 @@ Formulaire web → lead reçu → email de qualification → conversation → sc
 ```
 src/
 ├── types/index.ts              ← Tous les types TypeScript centralisés
-├── middleware.ts               ← Basic Auth sur dashboard + APIs de lecture
+├── middleware.ts               ← Garde de session (multi-tenant) sur dashboard + APIs de lecture
 ├── lib/
 │   ├── supabase.ts             ← Client Supabase (service role, server-side uniquement)
 │   ├── resend.ts               ← Client Resend + fonction sendEmail()
 │   ├── anthropic.ts            ← Client Anthropic + callClaude() (retries auto sur erreurs transitoires)
-│   ├── queries.ts              ← Requêtes dashboard partagées (server components)
+│   ├── auth.ts                 ← getPrincipal/scopeOf : identité de requête (rôle + client_id)
+│   ├── session.ts              ← Session signée HMAC (Web Crypto, Edge+Node)
+│   ├── password.ts             ← Hachage mots de passe PBKDF2 (Web Crypto)
+│   ├── queries.ts              ← Requêtes dashboard partagées, scopées par client_id
 │   ├── analytics.ts            ← computeAnalytics : funnel + taux + temps (logique pure)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   ├── idempotency.ts          ← Garde anti-doublons des webhooks (table processed_webhooks)
@@ -184,8 +187,18 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `v
 | `POST /api/webhook/email-inbound` | Signature Svix (`RESEND_WEBHOOK_SECRET`) — anti-replay 5 min |
 | `POST /api/webhook/cal` | Signature HMAC-SHA256 (`CAL_WEBHOOK_SECRET`, header `x-cal-signature-256`) |
 | `GET /api/cron/relances` | `Authorization: Bearer CRON_SECRET` |
-| Dashboard (`/`, `/leads/*`) + `GET /api/leads*`, `/api/stats` | Basic Auth via `src/middleware.ts` (`DASHBOARD_USER` / `DASHBOARD_PASSWORD`) |
+| Dashboard (`/`, `/leads/*`) + `GET /api/leads*`, `/api/stats` | Session signée via `src/middleware.ts` (cookie HMAC, `SESSION_SECRET`) — page `/login` |
 | `POST /api/webhook/form` | Public par design (reçoit les formulaires web) — déduplication 7 jours |
+
+### Multi-tenant — login par client
+
+Deux rôles, résolus à la connexion (`POST /api/auth/login`) :
+- **admin** — identifiants d'environnement (`DASHBOARD_USER`/`DASHBOARD_PASSWORD`) → voit **tous** les clients.
+- **client** — identifiants stockés sur la ligne `clients` (`login_email` + mot de passe haché PBKDF2) → voit **uniquement ses leads**.
+
+Le login pose un **cookie de session signé HMAC** (`src/lib/session.ts`) contenant `{role, client_id}`. Le middleware le vérifie à chaque requête (sans accès DB) et injecte `x-role`/`x-client-id` sur la requête transmise, après avoir **supprimé toute valeur entrante** (un client ne peut pas usurper le scope d'un autre via un header forgé). Les server components lisent ce contexte via `getPrincipal()` (`src/lib/auth.ts`) ; toutes les requêtes (`getLeads`, `getStats`, `getAnalytics`, `getLeadDetail`) sont scopées par `client_id`, avec **garde anti-IDOR** sur la fiche lead. Déconnexion : `POST /api/auth/logout`.
+
+Provisionner un client : exécuter `supabase/migrations/002_client_logins.sql` puis renseigner `login_email` + `login_password_salt`/`login_password_hash` (PBKDF2) sur la ligne `clients`.
 
 **Comportement dégradé volontaire :** si un secret n'est pas configuré dans l'environnement, la vérification correspondante est ignorée avec un warning dans les logs. Cela permet de déployer sans casser la prod, mais les secrets doivent être configurés dans Vercel au plus vite.
 

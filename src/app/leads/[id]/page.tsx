@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getLeadDetail } from '@/lib/queries'
+import { getPrincipal, scopeOf } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,8 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const data = await getLeadDetail(id)
+  const scope = scopeOf(await getPrincipal())
+  const data = await getLeadDetail(id, scope)
   if (!data) notFound()
 
   const { lead, messages, qualification_answers, scheduled_relances } = data

@@ -16,8 +16,15 @@ create table clients (
   name          text not null,
   sector        text not null,                -- ex: 'pac', 'renovation', 'isolation'
   config        jsonb not null default '{}',  -- voir structure ci-dessous
+  -- Connexion dashboard multi-tenant (provisionnée manuellement, mot de passe haché PBKDF2)
+  login_email          text,
+  login_password_hash  text,
+  login_password_salt  text,
   created_at    timestamptz not null default now()
 );
+
+create unique index clients_login_email_idx on clients (login_email)
+  where login_email is not null;
 
 -- Structure attendue du champ config :
 -- {

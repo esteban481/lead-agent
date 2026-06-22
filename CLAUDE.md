@@ -82,6 +82,8 @@ Le lead ID est encodé dans le replyTo : `leads+{lead_id}@flenaavios.resend.app`
 
 Chaque lead est lié à un `client_id`. Config client en JSONB dans `clients.config` (zone, questions, seuils, cal_booking_url, from_email, notify_email). Pas d'UI self-serve V1 — insertion manuelle via Supabase SQL Editor.
 
+Login par client : un client peut se connecter au dashboard (`/login`) et ne voir que ses leads, via `login_email` + mot de passe haché sur la ligne `clients` (voir section Multi-tenant d'ARCHITECTURE.md). L'admin (`DASHBOARD_USER`/`DASHBOARD_PASSWORD`) voit tout.
+
 ### Alertes commercial
 
 Si `config.notify_email` est renseigné : alerte email au commercial sur lead chaud (scoré A/B) et sur RDV confirmé (webhook Cal.com). Voir `src/lib/notify.ts` — no-op si absent, n'interrompt jamais le flux principal.
@@ -141,8 +143,9 @@ RESEND_FROM_EMAIL          → leads@leadqualifie.fr
 RESEND_INBOUND_EMAIL       → leads@flenaavios.resend.app (workaround temporaire, voir section workaround)
 RESEND_WEBHOOK_SECRET      → partagé équipe (vérification signature Svix webhook inbound)
 CAL_WEBHOOK_SECRET         → secret webhook Cal.com (vérification signature)
-DASHBOARD_USER             → identifiant Basic Auth dashboard (défaut: admin)
-DASHBOARD_PASSWORD         → mot de passe Basic Auth dashboard (si absent : dashboard ouvert + warning)
+DASHBOARD_USER             → identifiant admin dashboard (défaut: admin) — login via /login
+DASHBOARD_PASSWORD         → mot de passe admin dashboard
+SESSION_SECRET             → signature des cookies de session (chaîne aléatoire longue, requis)
 NEXT_PUBLIC_APP_URL        → http://localhost:3000 en dev
 CRON_SECRET                → partagé équipe
 ```

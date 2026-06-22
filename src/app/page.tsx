@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { getLeads, getStats, getAnalytics } from '@/lib/queries'
+import { getPrincipal, scopeOf } from '@/lib/auth'
 import type { ConversionAnalytics } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -32,10 +33,11 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function DashboardPage() {
+  const scope = scopeOf(await getPrincipal())
   const [leads, stats, analytics] = await Promise.all([
-    getLeads(),
-    getStats(),
-    getAnalytics(),
+    getLeads(scope),
+    getStats(scope),
+    getAnalytics(scope),
   ])
 
   return (
