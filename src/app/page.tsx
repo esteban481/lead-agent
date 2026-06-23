@@ -1,6 +1,14 @@
 import Link from 'next/link'
-import { getLeads, getStats, getAnalytics } from '@/lib/queries'
+import { getLeadsList, getStats, getAnalytics } from '@/lib/queries'
 import { getPrincipal, scopeOf } from '@/lib/auth'
+import {
+  parseFilters,
+  buildPagination,
+  filtersToQuery,
+  LEAD_STATUSES,
+  SCORE_CATEGORIES,
+  type LeadFilters,
+} from '@/lib/leads-filter'
 import type { ConversionAnalytics } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -32,13 +40,20 @@ const STATUS_COLORS: Record<string, string> = {
   cold: 'bg-gray-100 text-gray-500',
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; category?: string; q?: string; page?: string }>
+}) {
+  const filters = parseFilters(await searchParams)
   const scope = scopeOf(await getPrincipal())
-  const [leads, stats, analytics] = await Promise.all([
-    getLeads(scope),
+  const [list, stats, analytics] = await Promise.all([
+    getLeadsList(scope, filters),
     getStats(scope),
     getAnalytics(scope),
   ])
+  const leads = list.leads
+  const pagination = buildPagination(list.total, filters.page)
 
   return (
     <div className="space-y-8">
@@ -61,13 +76,21 @@ export default async function DashboardPage() {
 
       {/* Liste des leads */}
       <div>
-        <h2 className="text-base font-semibold mb-4">
-          Tous les leads ({leads.length})
-        </h2>
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+          <h2 className="text-base font-semibold">
+            Leads ({list.total})
+          </h2>
+          <span className="text-sm text-gray-400">
+            Page {pagination.page} / {pagination.totalPages}
+          </span>
+        </div>
+
+        <FilterBar filters={filters} />
+
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {leads.length === 0 ? (
             <div className="px-6 py-12 text-center text-gray-400 text-sm">
-              Aucun lead pour le moment.
+              Aucun lead ne correspond à ces critères.
             </div>
           ) : (
             <table className="w-full text-sm">
@@ -119,8 +142,105 @@ export default async function DashboardPage() {
             </table>
           )}
         </div>
+
+        {pagination.totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 text-sm">
+            {pagination.hasPrev ? (
+              <Link
+                href={`/${filtersToQuery(filters, pagination.page - 1)}`}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+              >
+                ← Précédent
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-gray-300">← Précédent</span>
+            )}
+            <span className="text-gray-400">
+              Page {pagination.page} / {pagination.totalPages}
+            </span>
+            {pagination.hasNext ? (
+              <Link
+                href={`/${filtersToQuery(filters, pagination.page + 1)}`}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+              >
+                Suivant →
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-gray-300">Suivant →</span>
+            )}
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+// Barre de filtres — formulaire GET (server-rendered, URL partageable)
+function FilterBar({ filters }: { filters: LeadFilters }) {
+  const STATUS_LABELS_FORM: Record<string, string> = {
+    new: 'Nouveau',
+    awaiting_reply: 'En attente',
+    qualifying: 'Qualification',
+    scoring: 'Scoring',
+    booked: 'RDV pris',
+    disqualified: 'Disqualifié',
+    cold: 'Froid',
+  }
+  const hasFilter = filters.status || filters.category || filters.search
+
+  return (
+    <form method="get" className="flex flex-wrap items-end gap-3 mb-4">
+      <div className="flex-1 min-w-[180px]">
+        <label className="block text-xs text-gray-500 mb-1" htmlFor="q">Recherche</label>
+        <input
+          id="q"
+          name="q"
+          type="text"
+          defaultValue={filters.search}
+          placeholder="Nom ou email…"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1" htmlFor="status">Statut</label>
+        <select
+          id="status"
+          name="status"
+          defaultValue={filters.status ?? ''}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Tous</option>
+          {LEAD_STATUSES.map((s) => (
+            <option key={s} value={s}>{STATUS_LABELS_FORM[s]}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1" htmlFor="category">Catégorie</label>
+        <select
+          id="category"
+          name="category"
+          defaultValue={filters.category ?? ''}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Toutes</option>
+          {SCORE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="submit"
+        className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+      >
+        Filtrer
+      </button>
+      {hasFilter && (
+        <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 px-2 py-2">
+          Réinitialiser
+        </Link>
+      )}
+    </form>
   )
 }
 

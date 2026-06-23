@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { computeAnalytics } from '@/lib/analytics'
+import { buildPagination, PAGE_SIZE, type LeadFilters } from '@/lib/leads-filter'
 import type {
   ConversionAnalytics,
   DashboardStats,
@@ -29,6 +30,34 @@ export async function getLeads(clientId: string | null = null, limit = 100): Pro
     return []
   }
   return (data ?? []) as Lead[]
+}
+
+// Liste paginée + filtrée (statut, catégorie, recherche nom/email).
+export async function getLeadsList(
+  clientId: string | null,
+  filters: LeadFilters
+): Promise<{ leads: Lead[]; total: number }> {
+  const { offset } = buildPagination(0, filters.page) // offset basé sur la page demandée
+  let query = supabase
+    .from('leads')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1)
+
+  if (clientId) query = query.eq('client_id', clientId)
+  if (filters.status) query = query.eq('status', filters.status)
+  if (filters.category) query = query.eq('score_category', filters.category)
+  if (filters.search) {
+    // search déjà nettoyé (parseFilters/sanitizeSearch)
+    query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
+  }
+
+  const { data, error, count } = await query
+  if (error) {
+    console.error('getLeadsList error:', error)
+    return { leads: [], total: 0 }
+  }
+  return { leads: (data ?? []) as Lead[], total: count ?? 0 }
 }
 
 export async function getStats(clientId: string | null = null): Promise<DashboardStats | null> {
