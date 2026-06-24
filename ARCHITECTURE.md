@@ -57,7 +57,7 @@ src/
     └── api/
         ├── webhook/form/       ← Reçoit les leads depuis formulaire web
         ├── webhook/email-inbound/ ← Reçoit les réponses email (Resend Inbound, event: email.received)
-        ├── webhook/cal/        ← Confirmation RDV Cal.com (à implémenter)
+        ├── webhook/cal/        ← Événements RDV Cal.com (création / annulation / report)
         ├── cron/relances/      ← Vercel Cron toutes les heures
         ├── leads/              ← GET liste leads
         ├── leads/[id]/         ← GET fiche lead
@@ -269,19 +269,21 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 
 ---
 
-## Ce qui reste à faire (V1)
-
-- [ ] Insérer le client démo en base (Supabase SQL Editor — voir `supabase/schema.sql`)
-- [ ] Tester le flow complet end-to-end (lead → email → réponse → score → Cal.com)
-- [ ] Webhook Cal.com (`/api/webhook/cal`) — confirmation RDV → **à implémenter**
-
 ## Ce qui est fait
 
-- [x] Stack complète déployée sur Vercel
-- [x] Base de données Supabase configurée
-- [x] Resend configuré (envoi + inbound sur leadqualifie.fr)
-- [x] Flow complet codé (webhook form → parsing → qualification → scoring → décision → relances)
-- [x] Dashboard interne (liste leads + fiche lead + KPIs)
+- [x] Stack complète déployée sur Vercel, base Supabase + client démo en base
+- [x] Resend configuré (envoi + inbound), signatures webhooks vérifiées
+- [x] Flow complet (webhook form → parsing → qualification → scoring → décision → relances)
+- [x] Webhook Cal.com : création / annulation / report de RDV
+- [x] Dashboard : funnel de conversion, liste filtrable/cherchable/paginée, fiche lead
+- [x] Multi-tenant : login par client (scoping + anti-IDOR), rôle admin
+- [x] Fiabilité : idempotence webhooks, fuseau horaire relances, résilience IA, scoring déterministe
+
+## Ce qui reste à faire
+
+- [ ] Onboarder un vrai client pilote
+- [ ] Fixer le custom domain inbound Resend (`leads@leadqualifie.fr`) — problème côté Resend/AWS SES
+- [ ] (Optionnel) Tests d'intégration des webhooks form + inbound ; observabilité (logs structurés)
 
 ## Alertes commercial
 
