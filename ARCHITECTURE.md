@@ -283,7 +283,9 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 
 - [ ] Onboarder un vrai client pilote
 - [ ] Fixer le custom domain inbound Resend (`leads@leadqualifie.fr`) — problème côté Resend/AWS SES
-- [ ] (Optionnel) Tests d'intégration des webhooks form + inbound ; observabilité (logs structurés)
+- [ ] (Optionnel) Observabilité (logs structurés), état d'erreur visible pour leads bloqués
+
+> Tests : logique pure (scoring, analytics, session, filtres…) + les **3 webhooks** (form, inbound, cal) couverts par un mock Supabase chaînable. `npm test`.
 
 ## Alertes commercial
 
