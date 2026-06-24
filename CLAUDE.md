@@ -52,7 +52,7 @@ Toutes les fonctions IA retournent du JSON avec fallback en cas d'erreur.
 | `GET /api/leads` | Liste leads dashboard |
 | `GET /api/leads/[id]` | Fiche lead complète |
 | `GET /api/stats` | KPIs agrégés |
-| `POST /api/webhook/cal` | ⚠️ À implémenter — confirmation RDV Cal.com |
+| `POST /api/webhook/cal` | Événements Cal.com : RDV créé (→ booked), annulé (→ rouvre le lead), reporté (→ maj date) |
 
 ### Cycle de vie d'un lead
 
