@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/resend'
 import { generateRelanceEmail } from '@/lib/ai/generate'
 import { buildReplyTo } from '@/lib/email-utils'
 import { getHourInTimeZone } from '@/lib/time'
+import { logger, errContext } from '@/lib/logger'
 import type { Client, Lead, ScheduledRelance } from '@/types'
 
 // Fuseau de référence pour la plage horaire des relances (config client en heures locales France)
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     .limit(50) // traitement par batch pour éviter les timeouts Vercel
 
   if (error) {
-    console.error('Cron relances fetch error:', error)
+    logger.error('cron relances : échec lecture DB', { job: 'cron-relances', error: error.message })
     return NextResponse.json({ error: 'DB error' }, { status: 500 })
   }
 
@@ -132,11 +133,11 @@ export async function GET(req: NextRequest) {
 
       results.sent++
     } catch (err) {
-      console.error(`Relance error for lead ${lead.id}:`, err)
+      logger.error('cron relances : échec envoi', { job: 'cron-relances', lead_id: lead.id, step: typedRelance.step, ...errContext(err) })
       results.errors++
     }
   }
 
-  console.log('Cron relances result:', results)
+  logger.info('cron relances terminé', { job: 'cron-relances', ...results })
   return NextResponse.json({ ok: true, ...results })
 }

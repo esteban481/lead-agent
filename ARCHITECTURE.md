@@ -46,6 +46,7 @@ src/
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
 │   ├── email-utils.ts          ← buildReplyTo (lead ID encodé en plus-addressing)
 │   ├── time.ts                 ← Heure locale par fuseau (DST) pour la plage de relances
+│   ├── logger.ts               ← Logs structurés JSON (niveau via LOG_LEVEL, contexte lead_id)
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
