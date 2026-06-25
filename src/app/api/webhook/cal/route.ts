@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { verifyCalWebhook } from '@/lib/webhook-security'
 import { claimWebhook, releaseWebhook } from '@/lib/idempotency'
 import { notifyCommercial } from '@/lib/notify'
+import { logger, errContext } from '@/lib/logger'
 import type { Client, Lead } from '@/types'
 
 // POST /api/webhook/cal
@@ -10,6 +11,7 @@ import type { Client, Lead } from '@/types'
 const HANDLED_EVENTS = ['BOOKING_CREATED', 'BOOKING_CANCELLED', 'BOOKING_RESCHEDULED']
 
 export async function POST(req: NextRequest) {
+  const log = logger.with({ webhook: 'cal' })
   // Clé d'idempotence réservée — libérée si le traitement échoue
   let claimedKey: string | null = null
 
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const verification = verifyCalWebhook(rawBody, req.headers)
     if (!verification.valid) {
-      console.warn('[cal] webhook rejeté:', verification.reason)
+      log.warn('webhook rejeté', { reason: verification.reason })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
     const idemKey = `${triggerEvent}:${bookingUid ?? attendeeEmail}`
     const claim = await claimWebhook('cal', idemKey)
     if (claim === 'duplicate') {
-      console.log('[cal] événement déjà traité, ignoré:', idemKey)
+      log.debug('événement déjà traité, ignoré', { idemKey })
       return NextResponse.json({ ok: true, duplicate: true })
     }
     if (claim === 'new') claimedKey = idemKey
@@ -52,7 +54,7 @@ export async function POST(req: NextRequest) {
     // Retrouver le lead : par cal_booking_id (uid) puis par email (fallback)
     const lead = await findLead(bookingUid, attendeeEmail)
     if (!lead) {
-      console.warn('[cal] aucun lead trouvé', { bookingUid, attendeeEmail })
+      log.warn('aucun lead trouvé', { bookingUid, attendeeEmail })
       return NextResponse.json({ ok: true, matched: false })
     }
 
@@ -68,10 +70,10 @@ export async function POST(req: NextRequest) {
       await notifyCommercial((client as Client).config, lead, subject, lines)
     }
 
-    console.log('[cal]', triggerEvent, 'lead', lead.id)
+    log.info('événement traité', { event: triggerEvent, lead_id: lead.id })
     return NextResponse.json({ ok: true, lead_id: lead.id, event: triggerEvent })
   } catch (err) {
-    console.error('Cal webhook error:', err)
+    log.error('erreur webhook', errContext(err))
     if (claimedKey) await releaseWebhook('cal', claimedKey)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

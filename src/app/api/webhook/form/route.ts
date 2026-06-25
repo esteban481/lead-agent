@@ -4,11 +4,13 @@ import { sendEmail } from '@/lib/resend'
 import { buildReplyTo } from '@/lib/email-utils'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { generateQualificationEmail } from '@/lib/ai/generate'
+import { logger, errContext } from '@/lib/logger'
 import type { Client, FormWebhookPayload, Lead } from '@/types'
 
 // POST /api/webhook/form?client_id=xxx
 // Reçoit un lead depuis un formulaire web
 export async function POST(req: NextRequest) {
+  const log = logger.with({ webhook: 'form' })
   try {
     const clientId = req.nextUrl.searchParams.get('client_id')
     if (!clientId) {
@@ -77,7 +79,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (leadError || !lead) {
-      console.error('Lead insert error:', leadError)
+      log.error('échec création lead', { client_id: clientId, error: leadError?.message })
       return NextResponse.json({ error: 'Failed to create lead' }, { status: 500 })
     }
 
@@ -155,9 +157,10 @@ export async function POST(req: NextRequest) {
       await scheduleRelances(typedLead.id)
     }
 
+    log.info('lead créé', { lead_id: typedLead.id, client_id: clientId, contacted: !!email })
     return NextResponse.json({ ok: true, lead_id: typedLead.id })
   } catch (err) {
-    console.error('Webhook form error:', err)
+    log.error('erreur webhook', errContext(err))
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -5,6 +5,7 @@ import { verifyResendWebhook } from '@/lib/webhook-security'
 import { claimWebhook, releaseWebhook } from '@/lib/idempotency'
 import { buildReplyTo } from '@/lib/email-utils'
 import { notifyCommercial } from '@/lib/notify'
+import { logger, errContext } from '@/lib/logger'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { scoreLead } from '@/lib/ai/score'
 import { decideNextAction } from '@/lib/ai/decide'
@@ -23,6 +24,7 @@ import type {
 // POST /api/webhook/email-inbound
 // Reçoit les réponses email du lead via Resend Inbound (event: email.received)
 export async function POST(req: NextRequest) {
+  const log = logger.with({ webhook: 'inbound' })
   // Id de l'event réservé pour l'idempotence — libéré si le traitement échoue
   let claimedEventId: string | null = null
 
@@ -32,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     const verification = verifyResendWebhook(rawBody, req.headers)
     if (!verification.valid) {
-      console.warn('[inbound] webhook rejeté:', verification.reason)
+      log.warn('webhook rejeté', { reason: verification.reason })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
     }
 
@@ -48,7 +50,7 @@ export async function POST(req: NextRequest) {
     // Idempotence : ne pas re-traiter un email déjà reçu (double-delivery Resend)
     const claim = await claimWebhook('resend_inbound', data.email_id)
     if (claim === 'duplicate') {
-      console.log('[inbound] event déjà traité, ignoré:', data.email_id)
+      log.debug('event déjà traité, ignoré', { email_id: data.email_id })
       return NextResponse.json({ ok: true, duplicate: true })
     }
     if (claim === 'new') claimedEventId = data.email_id
@@ -57,34 +59,28 @@ export async function POST(req: NextRequest) {
 
     // Le webhook Resend n'inclut pas le body — il faut le fetcher séparément
     let messageText = data.text ?? ''
-    console.log('[inbound] email_id:', data.email_id, 'text preview:', messageText.slice(0, 100))
+    log.debug('email reçu', { email_id: data.email_id, from: fromEmail })
 
     if (data.email_id) {
       try {
         const res = await fetch(`https://api.resend.com/emails/receiving/${data.email_id}`, {
           headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
         })
-        console.log('[inbound] Resend API status:', res.status)
         if (res.ok) {
           const full = await res.json()
-          console.log('[inbound] fetched text:', (full.text ?? '').slice(0, 200))
           messageText = full.text ?? full.html?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ?? ''
           // Extraire in_reply_to depuis les headers si absent du payload
           if (!inReplyTo && full.headers) {
             const raw = full.headers['In-Reply-To'] ?? full.headers['in-reply-to'] ?? ''
             if (raw) inReplyTo = cleanMessageId(raw)
-            console.log('[inbound] in_reply_to from headers:', inReplyTo)
           }
         } else {
-          const err = await res.text()
-          console.warn('[inbound] Resend API error:', res.status, err)
+          log.warn('échec récupération corps Resend', { status: res.status })
         }
       } catch (err) {
-        console.warn('[inbound] Failed to fetch email content:', err)
+        log.warn('échec fetch corps email', errContext(err))
       }
     }
-
-    console.log('[inbound] final messageText:', messageText.slice(0, 200))
 
     // 1. Retrouver le lead
     // Priorité 1 : ID encodé dans l'adresse to (leads+{id}@...)
@@ -94,7 +90,6 @@ export async function POST(req: NextRequest) {
 
     const toAddress = (data.to ?? [])[0] ?? ''
     const leadIdFromTo = toAddress.match(/\+([0-9a-f-]{36})@/i)?.[1]
-    console.log('[inbound] to:', toAddress, 'leadId:', leadIdFromTo)
 
     if (leadIdFromTo) {
       const { data: found } = await supabase
@@ -127,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!lead) {
-      console.warn('Inbound email: no matching lead found', { inReplyTo, fromEmail })
+      log.warn('aucun lead correspondant', { inReplyTo, fromEmail })
       return NextResponse.json({ ok: true, matched: false })
     }
 
@@ -139,7 +134,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (!client) {
-      console.error('Client not found for lead', lead.id)
+      log.error('client introuvable pour le lead', { lead_id: lead.id, client_id: lead.client_id })
       return NextResponse.json({ error: 'Client not found' }, { status: 500 })
     }
 
@@ -282,9 +277,10 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    log.info('réponse traitée', { lead_id: lead.id, all_answered: allAnswered })
     return NextResponse.json({ ok: true, lead_id: lead.id })
   } catch (err) {
-    console.error('Webhook email-inbound error:', err)
+    log.error('erreur webhook', errContext(err))
     // Libère la clé d'idempotence pour qu'un retry de Resend puisse rejouer
     if (claimedEventId) await releaseWebhook('resend_inbound', claimedEventId)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
