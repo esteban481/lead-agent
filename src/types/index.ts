@@ -47,6 +47,12 @@ export interface ClientConfig {
   from_email: string
   // Email du commercial à alerter (lead chaud, RDV confirmé). Optionnel.
   notify_email?: string
+  // Branding optionnel des emails (logo https, couleur hex, nom)
+  branding?: {
+    company_name?: string
+    color?: string
+    logo_url?: string
+  }
 }
 
 // ============================================================
