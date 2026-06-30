@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getLeadDetail } from '@/lib/queries'
 import { getPrincipal, scopeOf } from '@/lib/auth'
+import LeadActions from './LeadActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +80,11 @@ export default async function LeadDetailPage({
             {new Date(lead.meeting_booked_at).toLocaleString('fr-FR')}
           </div>
         )}
+
+        {/* Actions manuelles */}
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <LeadActions leadId={lead.id} status={lead.status} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

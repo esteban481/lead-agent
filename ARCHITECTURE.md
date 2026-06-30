@@ -216,6 +216,8 @@ Les pages du dashboard sont des server components qui appellent `src/lib/queries
 
 Le dashboard (`/`) affiche un **funnel** Reçus → Contactés → Qualifiés → RDV pris avec les taux de conversion inter-étapes, plus : conversion globale, temps moyen de 1er contact (rapidité de l'agent), délai moyen jusqu'au RDV, et leads perdus (froids + disqualifiés). Calcul dans `src/lib/analytics.ts` (`computeAnalytics`, logique pure et testée) ; récupération des données dans `getAnalytics` (`src/lib/queries.ts`). Aucun changement de schéma — tout est dérivé des tables `leads` et `messages`.
 
+La **fiche lead** (`/leads/[id]`) expose des **actions manuelles** (marquer RDV pris, disqualifier, rouvrir) via `POST /api/leads/[id]/action` — mêmes gardes de périmètre que la lecture (un client n'agit que sur ses leads). Composant client `LeadActions.tsx`.
+
 La **liste de leads** est filtrable (statut, catégorie), cherchable (nom/email) et paginée (20/page). Filtres en query params via un formulaire GET server-rendered (URLs partageables) ; logique pure dans `src/lib/leads-filter.ts` (`parseFilters`, `buildPagination`, `sanitizeSearch` — testés), requête dans `getLeadsList`. Le funnel et les compteurs restent calculés sur le scope complet, pas sur le sous-ensemble filtré.
 
 ---
