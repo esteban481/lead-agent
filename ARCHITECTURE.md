@@ -35,7 +35,7 @@ src/
 ├── lib/
 │   ├── supabase.ts             ← Client Supabase (service role, server-side uniquement)
 │   ├── resend.ts               ← Client Resend + sendEmail() (multipart texte + HTML)
-│   ├── email-template.ts       ← Rendu HTML des emails (échappement, liens cliquables)
+│   ├── email-template.ts       ← Rendu HTML des emails (échappement, liens, branding client)
 │   ├── anthropic.ts            ← Client Anthropic + callClaude() (retries auto sur erreurs transitoires)
 │   ├── auth.ts                 ← getPrincipal/scopeOf : identité de requête (rôle + client_id)
 │   ├── session.ts              ← Session signée HMAC (Web Crypto, Edge+Node)

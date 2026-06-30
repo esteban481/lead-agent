@@ -51,7 +51,12 @@ create unique index clients_login_email_idx on clients (login_email)
 --   "relance_hours": { "start": 8, "end": 20 },
 --   "cal_booking_url": "https://cal.com/xxx/15min",
 --   "from_email": "leads@tondomaine.com",
---   "notify_email": "commercial@entreprise-cliente.com"  -- optionnel : alertes lead chaud / RDV
+--   "notify_email": "commercial@entreprise-cliente.com",  -- optionnel : alertes lead chaud / RDV
+--   "branding": {                                          -- optionnel : branding des emails
+--     "company_name": "Acme PAC",
+--     "color": "#ff6600",                                  -- hex strict (validé côté code)
+--     "logo_url": "https://cdn.exemple.com/logo.png"       -- https uniquement
+--   }
 -- }
 
 -- ============================================================

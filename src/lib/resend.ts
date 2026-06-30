@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { renderEmailHtml } from '@/lib/email-template'
+import { renderEmailHtml, type EmailBranding } from '@/lib/email-template'
 
 export const resend = new Resend(process.env.RESEND_API_KEY!)
 
@@ -9,6 +9,7 @@ export async function sendEmail({
   subject,
   text,
   html,
+  branding,
   replyTo,
   headers,
 }: {
@@ -17,17 +18,18 @@ export async function sendEmail({
   subject: string
   text: string
   html?: string
+  branding?: EmailBranding
   replyTo?: string
   headers?: Record<string, string>
 }): Promise<{ id: string }> {
   // Envoi multipart : texte (fallback / délivrabilité) + HTML (rendu).
-  // Le HTML est dérivé du texte si non fourni explicitement.
+  // Le HTML est dérivé du texte (avec le branding client) si non fourni.
   const { data, error } = await resend.emails.send({
     from,
     to,
     subject,
     text,
-    html: html ?? renderEmailHtml(text),
+    html: html ?? renderEmailHtml(text, branding),
     replyTo: replyTo,
     headers,
   })

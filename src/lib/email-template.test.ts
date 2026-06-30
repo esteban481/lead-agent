@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { renderEmailHtml } from './email-template'
+import { renderEmailHtml, brandingFromConfig } from './email-template'
+import type { ClientConfig } from '@/types'
 
 describe('renderEmailHtml', () => {
   it('échappe le HTML du corps (anti-injection)', () => {
@@ -32,5 +33,52 @@ describe('renderEmailHtml', () => {
 
   it('gère un corps vide sans planter', () => {
     expect(() => renderEmailHtml('')).not.toThrow()
+  })
+
+  it('sans branding : pas d en-tête ni de pied, couleur par défaut (rétrocompatible)', () => {
+    const html = renderEmailHtml('voir https://x.fr')
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('border-top') // pas de pied de page
+    expect(html).toContain('color:#2563eb') // lien en couleur par défaut
+  })
+})
+
+describe('renderEmailHtml — branding', () => {
+  it('affiche le nom de société en en-tête et en pied', () => {
+    const html = renderEmailHtml('Bonjour', { companyName: 'Acme PAC' })
+    expect(html).toContain('Acme PAC')
+    expect(html).toContain('border-top') // pied de page
+  })
+
+  it('applique la couleur d accent valide aux liens', () => {
+    const html = renderEmailHtml('voir https://x.fr', { color: '#ff6600' })
+    expect(html).toContain('color:#ff6600')
+  })
+
+  it('ignore une couleur invalide (anti-injection CSS) → défaut', () => {
+    const html = renderEmailHtml('voir https://x.fr', { color: 'red;}body{display:none' })
+    expect(html).toContain('color:#2563eb')
+    expect(html).not.toContain('display:none')
+  })
+
+  it('affiche un logo https en <img>', () => {
+    const html = renderEmailHtml('Bonjour', { logoUrl: 'https://cdn.test/logo.png', companyName: 'Acme' })
+    expect(html).toContain('<img src="https://cdn.test/logo.png"')
+  })
+
+  it('ignore un logo non-https (sécurité) et retombe sur le nom', () => {
+    const html = renderEmailHtml('Bonjour', { logoUrl: 'http://insecure/logo.png', companyName: 'Acme' })
+    expect(html).not.toContain('<img')
+    expect(html).toContain('Acme')
+  })
+})
+
+describe('brandingFromConfig', () => {
+  it('extrait les champs de branding de la config', () => {
+    const config = { branding: { company_name: 'Acme', color: '#123456', logo_url: 'https://x/l.png' } } as unknown as ClientConfig
+    expect(brandingFromConfig(config)).toEqual({ companyName: 'Acme', color: '#123456', logoUrl: 'https://x/l.png' })
+  })
+  it('retourne des champs vides si pas de branding', () => {
+    expect(brandingFromConfig({} as ClientConfig)).toEqual({ companyName: undefined, color: undefined, logoUrl: undefined })
   })
 })

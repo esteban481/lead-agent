@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/resend'
 import { verifyResendWebhook } from '@/lib/webhook-security'
 import { claimWebhook, releaseWebhook } from '@/lib/idempotency'
 import { buildReplyTo } from '@/lib/email-utils'
+import { brandingFromConfig } from '@/lib/email-template'
 import { notifyCommercial } from '@/lib/notify'
 import { logger, errContext } from '@/lib/logger'
 import { parseLeadMessage } from '@/lib/ai/parse'
@@ -231,7 +232,7 @@ export async function POST(req: NextRequest) {
           typedClient.config,
           scoreResult.summary
         )
-        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
+        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
 
         // Alerte le commercial sur les leads chauds (A/B)
         if (scoreResult.category === 'A' || scoreResult.category === 'B') {
@@ -258,7 +259,7 @@ export async function POST(req: NextRequest) {
         }
       } else if (decision.action === 'disqualify') {
         const { subject, body } = await generateDisqualificationEmail(lead, decision.reason)
-        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
+        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
       }
     } else {
       // 9b. Il manque encore des infos → question suivante
@@ -267,7 +268,7 @@ export async function POST(req: NextRequest) {
         allAnswers,
         typedClient.config
       )
-      await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body)
+      await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
 
       await supabase.from('scheduled_relances').insert({
         lead_id: lead.id,
@@ -305,10 +306,18 @@ async function sendAndLogEmail(
   to: string,
   from: string,
   subject: string,
-  body: string
+  body: string,
+  config?: Client['config']
 ) {
   const replyTo = buildReplyTo(leadId)
-  const { id: resendId } = await sendEmail({ to, from, subject, text: body, replyTo })
+  const { id: resendId } = await sendEmail({
+    to,
+    from,
+    subject,
+    text: body,
+    branding: brandingFromConfig(config),
+    replyTo,
+  })
   await supabase.from('messages').insert({
     lead_id: leadId,
     direction: 'out',
