@@ -23,6 +23,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   <Link href="/" className="text-gray-500 hover:text-gray-900">
                     Dashboard
                   </Link>
+                  {principal.role === 'admin' && (
+                    <Link href="/clients" className="text-gray-500 hover:text-gray-900">
+                      Clients
+                    </Link>
+                  )}
                   <span className="text-gray-300">|</span>
                   <span className="text-gray-400">
                     {principal.role === 'admin' ? 'Admin' : 'Client'}

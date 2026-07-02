@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { computeAnalytics } from '@/lib/analytics'
 import { buildPagination, PAGE_SIZE, type LeadFilters } from '@/lib/leads-filter'
 import type {
+  Client,
   ConversionAnalytics,
   DashboardStats,
   Lead,
@@ -9,6 +10,19 @@ import type {
   QualificationAnswer,
   ScheduledRelance,
 } from '@/types'
+
+// Liste des clients pour l'admin (config incluse, sans secrets de login).
+export async function getClientsAdmin(): Promise<Pick<Client, 'id' | 'name' | 'sector' | 'config' | 'created_at'>[]> {
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, name, sector, config, created_at')
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error('getClientsAdmin error:', error)
+    return []
+  }
+  return (data ?? []) as Pick<Client, 'id' | 'name' | 'sector' | 'config' | 'created_at'>[]
+}
 
 // ============================================================
 // Requêtes partagées dashboard — appelées directement par les
