@@ -37,6 +37,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Espaces réservés à l'admin (gestion des clients)
+  const isAdminPath = pathname === '/clients' ||
+    pathname.startsWith('/clients/') ||
+    pathname.startsWith('/api/clients')
+  if (isAdminPath && session.role !== 'admin') {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
   // En-têtes de confiance : on efface toute valeur entrante avant de poser la nôtre
   const headers = new Headers(req.headers)
   headers.delete('x-role')
@@ -48,5 +59,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/leads/:path*', '/api/leads/:path*', '/api/stats'],
+  matcher: [
+    '/',
+    '/leads/:path*',
+    '/clients',
+    '/clients/:path*',
+    '/api/leads/:path*',
+    '/api/stats',
+    '/api/clients/:path*',
+  ],
 }

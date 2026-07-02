@@ -48,6 +48,7 @@ src/
 │   ├── email-utils.ts          ← buildReplyTo (lead ID encodé en plus-addressing)
 │   ├── time.ts                 ← Heure locale par fuseau (DST) pour la plage de relances
 │   ├── logger.ts               ← Logs structurés JSON (niveau via LOG_LEVEL, contexte lead_id)
+│   ├── client-config.ts        ← Validation de la config client + config par défaut
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
@@ -200,7 +201,7 @@ Deux rôles, résolus à la connexion (`POST /api/auth/login`) :
 
 Le login pose un **cookie de session signé HMAC** (`src/lib/session.ts`) contenant `{role, client_id}`. Le middleware le vérifie à chaque requête (sans accès DB) et injecte `x-role`/`x-client-id` sur la requête transmise, après avoir **supprimé toute valeur entrante** (un client ne peut pas usurper le scope d'un autre via un header forgé). Les server components lisent ce contexte via `getPrincipal()` (`src/lib/auth.ts`) ; toutes les requêtes (`getLeads`, `getStats`, `getAnalytics`, `getLeadDetail`) sont scopées par `client_id`, avec **garde anti-IDOR** sur la fiche lead. Déconnexion : `POST /api/auth/logout`.
 
-Provisionner un login client (sans calculer le hash à la main) :
+**Gestion des clients (admin) :** la page `/clients` (réservée admin par le middleware) permet de lister, créer (config JSONB validée par `client-config.ts`), éditer la config et provisionner le login d'un client (`POST /api/clients/[id]/login` → hash PBKDF2). Le provisioning login renvoie un 409 clair tant que la migration 002 n'est pas appliquée. Alternative en ligne de commande :
 ```bash
 node scripts/provision-client-login.mjs <email> <motdepasse> <client_id>
 ```
