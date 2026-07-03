@@ -6,7 +6,14 @@ import { buildReplyTo } from '@/lib/email-utils'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { generateQualificationEmail } from '@/lib/ai/generate'
 import { logger, errContext } from '@/lib/logger'
+import { createRateLimiter } from '@/lib/rate-limit'
 import type { Client, FormWebhookPayload, Lead } from '@/types'
+
+// Endpoint public → durcissement basique
+const MAX_BODY_BYTES = 50_000
+const MAX_MESSAGE_CHARS = 4_000
+// Best-effort (mémoire par instance) — voir src/lib/rate-limit.ts
+const formLimiter = createRateLimiter({ limit: 10, windowMs: 60_000 })
 
 // POST /api/webhook/form?client_id=xxx
 // Reçoit un lead depuis un formulaire web
@@ -18,7 +25,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing client_id' }, { status: 400 })
     }
 
-    const payload: FormWebhookPayload = await req.json()
+    // Rate limit best-effort par client + IP (borne les rafales)
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const rl = formLimiter.check(`${clientId}:${ip}`)
+    if (!rl.allowed) {
+      log.warn('rate limit dépassé', { client_id: clientId, ip })
+      return NextResponse.json(
+        { error: 'Too many requests' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) } }
+      )
+    }
+
+    // Rejette un corps trop volumineux (anti-abus)
+    const rawBody = await req.text()
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 })
+    }
+
+    let payload: FormWebhookPayload
+    try {
+      payload = JSON.parse(rawBody)
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
 
     // 1. Charger la config client
     const { data: client, error: clientError } = await supabase
@@ -32,6 +61,14 @@ export async function POST(req: NextRequest) {
     }
 
     const typedClient = client as Client
+
+    // Honeypot : si le champ leurre configuré est rempli → bot, on ignore
+    // silencieusement (200 pour ne pas signaler la détection).
+    const hpField = typedClient.config.honeypot_field
+    if (hpField && typeof payload[hpField] === 'string' && (payload[hpField] as string).trim()) {
+      log.info('honeypot déclenché, lead ignoré', { client_id: clientId })
+      return NextResponse.json({ ok: true, ignored: true })
+    }
 
     // 2. Normalisation des données basiques
     const email = normalizeEmail(payload.email)
@@ -64,7 +101,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Création du lead
-    const rawMessage = payload.message ?? ''
+    // Plafonne la longueur envoyée à Claude (coût + anti-abus)
+    const rawMessage = (payload.message ?? '').slice(0, MAX_MESSAGE_CHARS)
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({

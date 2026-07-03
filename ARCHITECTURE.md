@@ -49,6 +49,7 @@ src/
 │   ├── time.ts                 ← Heure locale par fuseau (DST) pour la plage de relances
 │   ├── logger.ts               ← Logs structurés JSON (niveau via LOG_LEVEL, contexte lead_id)
 │   ├── client-config.ts        ← Validation de la config client + config par défaut
+│   ├── rate-limit.ts           ← Rate limiter en mémoire (best-effort, webhook form)
 │   └── ai/
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
@@ -191,7 +192,7 @@ Vercel déclenche `GET /api/cron/relances` toutes les heures (configuré dans `v
 | `POST /api/webhook/cal` | Signature HMAC-SHA256 (`CAL_WEBHOOK_SECRET`, header `x-cal-signature-256`) |
 | `GET /api/cron/relances` | `Authorization: Bearer CRON_SECRET` |
 | Dashboard (`/`, `/leads/*`) + `GET /api/leads*`, `/api/stats` | Session signée via `src/middleware.ts` (cookie HMAC, `SESSION_SECRET`) — page `/login` |
-| `POST /api/webhook/form` | Public par design (reçoit les formulaires web) — déduplication 7 jours |
+| `POST /api/webhook/form` | Public par design — durci : rate limit best-effort (10/min/client+IP), honeypot optionnel (`config.honeypot_field`), plafonds taille (413) et longueur message, déduplication 7 jours |
 
 ### Multi-tenant — login par client
 

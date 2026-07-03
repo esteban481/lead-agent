@@ -139,3 +139,37 @@ describe('webhook form — création', () => {
     expect(find('scheduled_relances', 'insert')).toBeUndefined()
   })
 })
+
+describe('webhook form — durcissement', () => {
+  it('400 sur JSON invalide', async () => {
+    const req = new NextRequest('http://x/api/webhook/form?client_id=client-json', {
+      method: 'POST',
+      body: '{pas du json',
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+  })
+
+  it('413 si le corps est trop volumineux', async () => {
+    const res = await POST(formReq({ email: 'a@b.fr', message: 'x'.repeat(60_000) }, 'client-big'))
+    expect(res.status).toBe(413)
+  })
+
+  it('honeypot rempli → lead ignoré silencieusement (200, pas d insert)', async () => {
+    h.responses.clients = () => ({ data: { id: 'client-1', config: { from_email: 'x@y.fr', honeypot_field: 'website' } }, error: null })
+    h.responses.leads = () => ({ data: null, error: null })
+    const res = await POST(formReq({ email: 'jean@test.fr', website: 'http://spam' }, 'client-hp'))
+    expect((await res.json()).ignored).toBe(true)
+    expect(find('leads', 'insert')).toBeUndefined()
+  })
+
+  it('429 au-delà de la limite (même client/IP)', async () => {
+    happyDb()
+    let last = 200
+    for (let i = 0; i < 11; i++) {
+      const res = await POST(formReq({ email: `x${i}@t.fr`, message: 'hi' }, 'client-rate'))
+      last = res.status
+    }
+    expect(last).toBe(429)
+  })
+})

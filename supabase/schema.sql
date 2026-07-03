@@ -56,7 +56,8 @@ create unique index clients_login_email_idx on clients (login_email)
 --     "company_name": "Acme PAC",
 --     "color": "#ff6600",                                  -- hex strict (validé côté code)
 --     "logo_url": "https://cdn.exemple.com/logo.png"       -- https uniquement
---   }
+--   },
+--   "honeypot_field": "website"                            -- optionnel : champ leurre anti-bot
 -- }
 
 -- ============================================================

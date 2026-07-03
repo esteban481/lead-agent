@@ -53,6 +53,8 @@ export interface ClientConfig {
     color?: string
     logo_url?: string
   }
+  // Nom d'un champ honeypot (leurre anti-bot) : si rempli, le lead est ignoré
+  honeypot_field?: string
 }
 
 // ============================================================
