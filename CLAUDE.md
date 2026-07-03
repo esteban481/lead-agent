@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # démarrer en local → http://localhost:3000
 npm run build     # build production (vérifie les types TypeScript)
 npm run lint      # linter ESLint
-npm test          # tests unitaires (vitest) — logique pure : decide, signatures, email-utils
+npm test          # tests (vitest) — logique pure, webhooks, routes API, composants React (jsdom)
 vercel --prod     # déployer en production
 ```
 
