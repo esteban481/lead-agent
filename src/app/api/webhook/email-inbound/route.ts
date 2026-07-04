@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
       // 9a. Toutes les infos collectées → score + décision
       await supabase.from('leads').update({ status: 'scoring' }).eq('id', lead.id)
 
-      const scoreResult = await scoreLead(lead, allAnswers, typedClient.config)
+      const scoreResult = await scoreLead(lead, allAnswers, typedClient.config, typedClient.sector)
       // On force missing_fields à [] car on sait que toutes les questions sont répondues
       const decision = decideNextAction(lead, { ...scoreResult, missing_fields: [] }, allAnswers, typedClient.config)
 
@@ -230,7 +230,8 @@ export async function POST(req: NextRequest) {
         const { subject, body } = await generateBookingEmail(
           lead,
           typedClient.config,
-          scoreResult.summary
+          scoreResult.summary,
+          typedClient.sector
         )
         await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
 
@@ -258,7 +259,7 @@ export async function POST(req: NextRequest) {
           })
         }
       } else if (decision.action === 'disqualify') {
-        const { subject, body } = await generateDisqualificationEmail(lead, decision.reason)
+        const { subject, body } = await generateDisqualificationEmail(lead, decision.reason, typedClient.config, typedClient.sector)
         await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
       }
     } else {
@@ -266,7 +267,8 @@ export async function POST(req: NextRequest) {
       const { subject, body } = await generateQualificationEmail(
         lead,
         allAnswers,
-        typedClient.config
+        typedClient.config,
+        typedClient.sector
       )
       await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
 

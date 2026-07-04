@@ -157,7 +157,8 @@ export async function POST(req: NextRequest) {
       const { subject, body } = await generateQualificationEmail(
         typedLead,
         existingAnswers,
-        typedClient.config
+        typedClient.config,
+        typedClient.sector
       )
 
       // Génère un Message-ID unique pour tracker les réponses
