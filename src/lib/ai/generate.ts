@@ -1,11 +1,13 @@
 import { callClaude } from '@/lib/anthropic'
+import { personaLine } from '@/lib/ai/persona'
 import type { ClientConfig, Lead, QualificationAnswer } from '@/types'
 
 // Génère l'email de première prise de contact + questions de qualification
 export async function generateQualificationEmail(
   lead: Lead,
   answers: QualificationAnswer[],
-  config: ClientConfig
+  config: ClientConfig,
+  sector?: string
 ): Promise<{ subject: string; body: string }> {
   const answeredKeys = new Set(answers.map((a) => a.question_key))
   const missing = config.qualification_questions.filter(
@@ -20,8 +22,8 @@ export async function generateQualificationEmail(
     .map((q, i) => `${i + 1}. ${q.label}`)
     .join('\n')
 
-  const prompt = `Tu es un assistant commercial pour une entreprise de rénovation énergétique.
-Ton rôle est d'écrire un email court, chaleureux et professionnel pour répondre à une demande de devis.
+  const prompt = `${personaLine(config, sector)}
+Ton rôle est d'écrire un email court, chaleureux et professionnel pour répondre à une demande entrante.
 
 Prospect : ${lead.name ?? 'le prospect'}
 Message initial : ${JSON.stringify(lead.raw_data)}
@@ -60,7 +62,8 @@ JSON:`
 export async function generateRelanceEmail(
   lead: Lead,
   step: number,
-  config: ClientConfig
+  config: ClientConfig,
+  sector?: string
 ): Promise<{ subject: string; body: string }> {
   const tones: Record<number, string> = {
     1: 'rappel doux et bienveillant (J+1)',
@@ -68,7 +71,7 @@ export async function generateRelanceEmail(
     3: 'dernier message, proposer directement un créneau (J+7)',
   }
 
-  const prompt = `Tu es un assistant commercial pour une entreprise de rénovation énergétique.
+  const prompt = `${personaLine(config, sector)}
 Écris un email de relance en français pour un prospect qui n'a pas répondu.
 
 Prospect : ${lead.name ?? 'le prospect'}
@@ -105,9 +108,10 @@ JSON:`
 export async function generateBookingEmail(
   lead: Lead,
   config: ClientConfig,
-  aiSummary: string
+  aiSummary: string,
+  sector?: string
 ): Promise<{ subject: string; body: string }> {
-  const prompt = `Tu es un assistant commercial pour une entreprise de rénovation énergétique.
+  const prompt = `${personaLine(config, sector)}
 Écris un email pour proposer un rendez-vous téléphonique de 15 minutes à un prospect qualifié.
 
 Prospect : ${lead.name ?? 'le prospect'}
@@ -142,9 +146,11 @@ JSON:`
 // Génère l'email de disqualification poli
 export async function generateDisqualificationEmail(
   lead: Lead,
-  reason: string
+  reason: string,
+  config?: ClientConfig,
+  sector?: string
 ): Promise<{ subject: string; body: string }> {
-  const prompt = `Tu es un assistant commercial pour une entreprise de rénovation énergétique.
+  const prompt = `${personaLine(config, sector)}
 Écris un email poli pour indiquer à un prospect que vous ne pouvez pas traiter sa demande.
 
 Prospect : ${lead.name ?? 'le prospect'}

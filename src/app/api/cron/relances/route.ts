@@ -97,7 +97,8 @@ export async function GET(req: NextRequest) {
       const { subject, body } = await generateRelanceEmail(
         lead,
         typedRelance.step,
-        typedClient.config
+        typedClient.config,
+        typedClient.sector
       )
 
       const { id: resendId } = await sendEmail({

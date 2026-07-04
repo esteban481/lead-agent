@@ -1,4 +1,5 @@
 import { callClaude } from '@/lib/anthropic'
+import { scoringPersonaLine } from '@/lib/ai/persona'
 import type { ClientConfig, Lead, QualificationAnswer, ScoreCategory, ScoreResult, ScoringWeights } from '@/types'
 
 // ============================================================
@@ -45,7 +46,8 @@ export function computeScore(
 export async function scoreLead(
   lead: Lead,
   answers: QualificationAnswer[],
-  config: ClientConfig
+  config: ClientConfig,
+  sector?: string
 ): Promise<ScoreResult> {
   const answersText = answers
     .map((a) => `- ${a.question_key}: ${a.answer}`)
@@ -55,7 +57,7 @@ export async function scoreLead(
     .map(([k, v]) => `- ${k}: 0 à ${v} points`)
     .join('\n')
 
-  const prompt = `Tu es un expert en qualification de leads pour une entreprise du secteur de la rénovation énergétique.
+  const prompt = `${scoringPersonaLine(config, sector)}
 
 Informations sur le prospect :
 Nom : ${lead.name ?? 'inconnu'}

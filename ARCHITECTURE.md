@@ -51,6 +51,7 @@ src/
 │   ├── client-config.ts        ← Validation de la config client + config par défaut
 │   ├── rate-limit.ts           ← Rate limiter en mémoire (best-effort, webhook form)
 │   └── ai/
+│       ├── persona.ts          ← Persona des prompts (company_name + sector du client)
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
 │       ├── generate.ts         ← Génère les emails (qualification, relance, booking, disqualif)
@@ -117,6 +118,7 @@ Retourne : `{ score, category, details, summary, missing_fields }`
 
 ### `generateQualificationEmail / generateRelanceEmail / generateBookingEmail / generateDisqualificationEmail`
 Génère le bon email selon le contexte. Toujours en JSON `{ subject, body }`.
+**Multi-secteur** : la persona des prompts est construite depuis `clients.sector` + `config.branding.company_name` (`src/lib/ai/persona.ts`) — plus aucun secteur hardcodé. Chaque fonction accepte `sector` en paramètre.
 
 ### `decideNextAction(lead, score, answers, config)`
 **Logique déterministe — pas de Claude ici.**
