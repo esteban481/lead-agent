@@ -1,0 +1,31 @@
+# CI — lint + tests + build sur chaque PR et sur main.
+# Les valeurs d'env sont des placeholders : le build instancie les
+# clients (Supabase, etc.) à l'import mais ne les appelle pas.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+      RESEND_API_KEY: re_ci_placeholder
+      ANTHROPIC_API_KEY: sk-ant-ci-placeholder
+      SESSION_SECRET: ci-placeholder-session-secret
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
