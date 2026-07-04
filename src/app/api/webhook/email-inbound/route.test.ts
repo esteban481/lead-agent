@@ -41,6 +41,7 @@ vi.mock('@/lib/idempotency', () => ({
 vi.mock('@/lib/notify', () => ({ notifyCommercial: vi.fn(async () => {}) }))
 vi.mock('@/lib/resend', () => ({ sendEmail: vi.fn(async () => ({ id: 'resend-1' })) }))
 vi.mock('@/lib/ai/parse', () => ({ parseLeadMessage: vi.fn(async () => ({})) }))
+vi.mock('@/lib/ai/intent', () => ({ detectIntent: vi.fn(async () => 'answer') }))
 vi.mock('@/lib/ai/score', () => ({ scoreLead: vi.fn() }))
 vi.mock('@/lib/ai/generate', () => ({
   generateQualificationEmail: vi.fn(async () => ({ subject: 'Q', body: 'q' })),
@@ -51,7 +52,9 @@ vi.mock('@/lib/ai/generate', () => ({
 import { POST } from './route'
 import { claimWebhook } from '@/lib/idempotency'
 import { notifyCommercial } from '@/lib/notify'
+import { detectIntent } from '@/lib/ai/intent'
 import { scoreLead } from '@/lib/ai/score'
+import { sendEmail } from '@/lib/resend'
 
 // fetch (récupération du corps Resend) → on force l'échec, parse est mocké de toute façon
 vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, text: async () => '' })))
@@ -142,6 +145,32 @@ describe('webhook inbound — qualification incomplète', () => {
     const rel = h.calls.find((c) => c.table === 'scheduled_relances' && c.op === 'insert')
     expect((rel?.payload as { step: number }).step).toBe(1)
     expect(scoreLead).not.toHaveBeenCalled() // pas de scoring tant qu'incomplet
+  })
+})
+
+describe('webhook inbound — détection d intention', () => {
+  it('opt_out : lead disqualifié, AUCUN email envoyé, pas de qualification', async () => {
+    matchedDb([])
+    ;(detectIntent as ReturnType<typeof vi.fn>).mockResolvedValueOnce('opt_out')
+    const res = await POST(inboundReq())
+    expect((await res.json()).intent).toBe('opt_out')
+
+    const disq = leadUpdates().find((c) => (c.payload as { status?: string }).status === 'disqualified')
+    expect((disq?.payload as { disqualified_reason: string }).disqualified_reason).toContain('Opt-out')
+    expect(sendEmail).not.toHaveBeenCalled() // on ne répond PAS à un opt-out
+    expect(scoreLead).not.toHaveBeenCalled()
+  })
+
+  it('not_interested : lead disqualifié + clôture polie envoyée', async () => {
+    matchedDb([])
+    ;(detectIntent as ReturnType<typeof vi.fn>).mockResolvedValueOnce('not_interested')
+    const res = await POST(inboundReq())
+    expect((await res.json()).intent).toBe('not_interested')
+
+    const disq = leadUpdates().find((c) => (c.payload as { status?: string }).status === 'disqualified')
+    expect((disq?.payload as { disqualified_reason: string }).disqualified_reason).toContain('Pas intéressé')
+    expect(sendEmail).toHaveBeenCalledOnce() // email de clôture poli
+    expect(scoreLead).not.toHaveBeenCalled()
   })
 })
 

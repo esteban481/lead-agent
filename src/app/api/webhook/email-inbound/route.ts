@@ -8,6 +8,7 @@ import { brandingFromConfig } from '@/lib/email-template'
 import { notifyCommercial } from '@/lib/notify'
 import { logger, errContext } from '@/lib/logger'
 import { parseLeadMessage } from '@/lib/ai/parse'
+import { detectIntent } from '@/lib/ai/intent'
 import { scoreLead } from '@/lib/ai/score'
 import { decideNextAction } from '@/lib/ai/decide'
 import {
@@ -158,6 +159,40 @@ export async function POST(req: NextRequest) {
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
       .eq('lead_id', lead.id)
       .eq('status', 'pending')
+
+    // 4bis. Détection d'intention : opt-out / pas intéressé ne doivent
+    // PAS entrer dans le pipeline de qualification.
+    const intent = await detectIntent(messageText)
+
+    if (intent === 'opt_out') {
+      // Le prospect ne veut plus être contacté : on clôture SANS répondre.
+      await supabase
+        .from('leads')
+        .update({ status: 'disqualified', disqualified_reason: 'Opt-out : ne souhaite plus être contacté' })
+        .eq('id', lead.id)
+      log.info('opt-out détecté, lead clôturé sans réponse', { lead_id: lead.id })
+      return NextResponse.json({ ok: true, lead_id: lead.id, intent })
+    }
+
+    if (intent === 'not_interested') {
+      // Clôture polie, texte statique (déterministe, pas d'appel Claude)
+      await supabase
+        .from('leads')
+        .update({ status: 'disqualified', disqualified_reason: 'Pas intéressé (réponse du prospect)' })
+        .eq('id', lead.id)
+      if (lead.email) {
+        await sendAndLogEmail(
+          lead.id,
+          lead.email,
+          typedClient.config.from_email,
+          'Bien noté',
+          `Bonjour${lead.name ? ` ${lead.name}` : ''},\n\nC'est bien noté, nous ne vous solliciterons plus à ce sujet. Si votre projet redevient d'actualité, vous pouvez répondre à cet email à tout moment.\n\nBonne continuation`,
+          typedClient.config
+        )
+      }
+      log.info('pas intéressé, lead clôturé poliment', { lead_id: lead.id })
+      return NextResponse.json({ ok: true, lead_id: lead.id, intent })
+    }
 
     // 5. Charger les réponses existantes
     const { data: existingAnswers } = await supabase
