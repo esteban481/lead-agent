@@ -52,6 +52,7 @@ src/
 │   ├── rate-limit.ts           ← Rate limiter en mémoire (best-effort, webhook form)
 │   └── ai/
 │       ├── persona.ts          ← Persona des prompts (company_name + sector du client)
+│       ├── intent.ts           ← Intention d'une réponse (opt_out / not_interested / answer)
 │       ├── parse.ts            ← Extrait les données structurées d'un message brut
 │       ├── score.ts            ← Calcule le score du lead (0-100)
 │       ├── generate.ts         ← Génère les emails (qualification, relance, booking, disqualif)
@@ -159,6 +160,10 @@ Payload Resend : { type: "email.received", data: { from, subject, text, message_
   2. Extrait in_reply_to pour retrouver le lead (fallback: email du lead)
   3. Log le message reçu
   4. Annule les relances pending
+  4bis. detectIntent (src/lib/ai/intent.ts) :
+     → opt_out (regex explicite sans appel Claude, ou classif Claude temp 0) : lead disqualifié, AUCUNE réponse envoyée
+     → not_interested : lead disqualifié + clôture polie (texte statique)
+     → answer : continue le pipeline
   5. parseLeadMessage → sauvegarde les nouvelles réponses
   6. Si infos manquantes → generateQualificationEmail → renvoie email
   7. Si tout collecté → scoreLead → decideNextAction
