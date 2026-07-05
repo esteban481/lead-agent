@@ -97,6 +97,10 @@ create table leads (
   -- RDV
   meeting_booked_at     timestamptz,
   cal_booking_id        text,
+  -- Notes internes du commercial (migration 003)
+  notes                 text,
+  -- Suivi d'erreur technique (migration 004)
+  last_error            text,
   -- Déduplication
   email_thread_id       text,      -- Message-ID du premier email envoyé
   -- Timestamps

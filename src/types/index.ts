@@ -89,6 +89,8 @@ export interface Lead {
   meeting_booked_at: string | null
   cal_booking_id: string | null
   email_thread_id: string | null
+  // Notes internes du commercial (migration 003)
+  notes: string | null
   created_at: string
   updated_at: string
 }
