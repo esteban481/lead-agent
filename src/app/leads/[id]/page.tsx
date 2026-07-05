@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getLeadDetail } from '@/lib/queries'
 import { getPrincipal, scopeOf } from '@/lib/auth'
 import LeadActions from './LeadActions'
+import LeadNotes from './LeadNotes'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,9 @@ export default async function LeadDetailPage({
           <LeadActions leadId={lead.id} status={lead.status} />
         </div>
       </div>
+
+      {/* Notes internes */}
+      <LeadNotes leadId={lead.id} initialNotes={lead.notes} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Qualification */}
