@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
   const log = logger.with({ webhook: 'inbound' })
   // Id de l'event réservé pour l'idempotence — libéré si le traitement échoue
   let claimedEventId: string | null = null
+  // Lead identifié — permet d'enregistrer last_error si le traitement échoue
+  let matchedLeadId: string | null = null
 
   try {
     // La signature svix est calculée sur le body brut — le lire avant de parser
@@ -127,6 +129,7 @@ export async function POST(req: NextRequest) {
       log.warn('aucun lead correspondant', { inReplyTo, fromEmail })
       return NextResponse.json({ ok: true, matched: false })
     }
+    matchedLeadId = lead.id
 
     // 2. Charger le client
     const { data: client } = await supabase
@@ -228,10 +231,10 @@ export async function POST(req: NextRequest) {
       })),
     ]
 
-    // 7. Mettre à jour le statut
+    // 7. Mettre à jour le statut (et effacer une éventuelle erreur précédente)
     await supabase
       .from('leads')
-      .update({ status: 'qualifying' })
+      .update({ status: 'qualifying', last_error: null })
       .eq('id', lead.id)
 
     // 8. Vérifier si toutes les questions sont répondues
@@ -319,6 +322,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, lead_id: lead.id })
   } catch (err) {
     log.error('erreur webhook', errContext(err))
+    // Rendre l'échec visible sur le dashboard (lead identifié uniquement)
+    if (matchedLeadId) {
+      const message = err instanceof Error ? err.message : String(err)
+      await supabase
+        .from('leads')
+        .update({ last_error: `[inbound] ${message}`.slice(0, 500) })
+        .eq('id', matchedLeadId)
+        .then(() => {}, () => {}) // ne jamais masquer l'erreur d'origine
+    }
     // Libère la clé d'idempotence pour qu'un retry de Resend puisse rejouer
     if (claimedEventId) await releaseWebhook('resend_inbound', claimedEventId)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

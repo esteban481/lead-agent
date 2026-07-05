@@ -47,10 +47,10 @@ export async function POST(
       await supabase.from('leads').update({ status: 'disqualified', disqualified_reason: reason }).eq('id', id)
       await cancelPendingRelances(id, now)
     } else {
-      // reopen : on rouvre le lead (efface RDV / raison de disqualification)
+      // reopen : on rouvre le lead (efface RDV / raison de disqualification / erreur)
       await supabase
         .from('leads')
-        .update({ status: 'awaiting_reply', meeting_booked_at: null, disqualified_reason: null })
+        .update({ status: 'awaiting_reply', meeting_booked_at: null, disqualified_reason: null, last_error: null })
         .eq('id', id)
     }
 

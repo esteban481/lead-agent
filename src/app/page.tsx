@@ -121,6 +121,14 @@ export default async function DashboardPage({
                       >
                         {STATUS_LABELS[lead.status] ?? lead.status}
                       </span>
+                      {lead.last_error && (
+                        <span
+                          className="ml-1 px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700"
+                          title={lead.last_error}
+                        >
+                          ⚠ erreur
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {lead.score_category ? (

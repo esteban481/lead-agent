@@ -91,6 +91,8 @@ export interface Lead {
   email_thread_id: string | null
   // Notes internes du commercial (migration 003)
   notes: string | null
+  // Dernière erreur technique de traitement (migration 004) — null si OK
+  last_error: string | null
   created_at: string
   updated_at: string
 }

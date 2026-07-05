@@ -137,6 +137,13 @@ export async function GET(req: NextRequest) {
       results.sent++
     } catch (err) {
       logger.error('cron relances : échec envoi', { job: 'cron-relances', lead_id: lead.id, step: typedRelance.step, ...errContext(err) })
+      // Rendre l'échec visible sur le dashboard
+      const message = err instanceof Error ? err.message : String(err)
+      await supabase
+        .from('leads')
+        .update({ last_error: `[relance ${typedRelance.step}] ${message}`.slice(0, 500) })
+        .eq('id', lead.id)
+        .then(() => {}, () => {})
       results.errors++
     }
   }

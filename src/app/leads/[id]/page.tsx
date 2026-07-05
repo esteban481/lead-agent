@@ -66,6 +66,17 @@ export default async function LeadDetailPage({
           </div>
         )}
 
+        {/* Erreur technique de traitement */}
+        {lead.last_error && (
+          <div className="mt-4 p-4 bg-red-50 rounded-lg text-sm text-red-800 border border-red-200">
+            <span className="font-medium">Erreur technique : </span>
+            {lead.last_error}
+            <span className="block mt-1 text-xs text-red-600">
+              Le dernier traitement automatique a échoué — vérifier le lead, puis « Rouvrir » pour effacer.
+            </span>
+          </div>
+        )}
+
         {/* Disqualification */}
         {lead.disqualified_reason && (
           <div className="mt-4 p-4 bg-red-50 rounded-lg text-sm text-red-800">
