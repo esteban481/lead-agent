@@ -106,13 +106,14 @@ describe('action lead — mutations', () => {
     expect((leadUpdate()?.payload as { disqualified_reason: string }).disqualified_reason).toBe('Disqualifié manuellement')
   })
 
-  it('reopen : rouvre et efface RDV + raison', async () => {
+  it('reopen : rouvre et efface RDV + raison + erreur technique', async () => {
     leadFound()
     await POST(actionReq({ action: 'reopen' }, 'client-1'), ctx)
     expect(leadUpdate()?.payload).toMatchObject({
       status: 'awaiting_reply',
       meeting_booked_at: null,
       disqualified_reason: null,
+      last_error: null,
     })
   })
 })

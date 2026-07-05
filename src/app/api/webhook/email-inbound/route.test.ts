@@ -135,6 +135,27 @@ describe('webhook inbound — garde', () => {
   })
 })
 
+describe('webhook inbound — état d erreur', () => {
+  it('échec après matching → last_error enregistré sur le lead + 500', async () => {
+    matchedDb([])
+    // Fait échouer le log du message entrant (étape post-matching)
+    h.responses.messages = () => { throw new Error('boom insert') }
+    const res = await POST(inboundReq())
+    expect(res.status).toBe(500)
+
+    const errUpd = leadUpdates().find((c) => (c.payload as { last_error?: string }).last_error)
+    expect((errUpd?.payload as { last_error: string }).last_error).toContain('boom insert')
+    expect((errUpd?.payload as { last_error: string }).last_error).toContain('[inbound]')
+  })
+
+  it('traitement réussi → last_error remis à null (auto-guérison)', async () => {
+    matchedDb([{ question_key: 'surface', answer: '120m2' }])
+    await POST(inboundReq())
+    const clearUpd = leadUpdates().find((c) => (c.payload as { status?: string }).status === 'qualifying')
+    expect((clearUpd?.payload as { last_error: null }).last_error).toBeNull()
+  })
+})
+
 describe('webhook inbound — qualification incomplète', () => {
   it('repose une question et planifie une relance step 1', async () => {
     matchedDb([{ question_key: 'surface', answer: '120m2' }]) // budget manquant
