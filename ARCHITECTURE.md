@@ -59,6 +59,7 @@ src/
 │       └── decide.ts           ← Décide de l'action suivante (logique déterministe)
 └── app/
     ├── page.tsx                ← Dashboard : liste leads + KPIs
+    ├── demo/                   ← Vitrine publique + formulaire de démo live (client démo)
     ├── leads/[id]/page.tsx     ← Fiche lead complète
     └── api/
         ├── webhook/form/       ← Reçoit les leads depuis formulaire web
@@ -218,6 +219,8 @@ Le script sort un bloc SQL (migration 002 incluse, idempotente) à coller dans S
 **Comportement dégradé volontaire :** si un secret n'est pas configuré dans l'environnement, la vérification correspondante est ignorée avec un warning dans les logs. Cela permet de déployer sans casser la prod, mais les secrets doivent être configurés dans Vercel au plus vite.
 
 Les pages du dashboard sont des server components qui appellent `src/lib/queries.ts` directement (requêtes Supabase) — pas de fetch HTTP vers notre propre API.
+
+**Page démo publique** : `/demo` (hors matcher middleware) est la vitrine de l'offre + un formulaire de démo live branché sur le webhook form du client `DEMO_CLIENT_ID` (env). Le formulaire embarque le honeypot `website` (activé dans la config du client démo). Un visiteur non connecté qui arrive sur `/` est redirigé vers `/demo` ; les autres pages protégées renvoient vers `/login`.
 
 ---
 

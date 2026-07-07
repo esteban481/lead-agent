@@ -31,6 +31,13 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const url = req.nextUrl.clone()
+    // Un visiteur qui arrive à la racine découvre la vitrine ;
+    // les pages internes renvoient au login avec retour.
+    if (pathname === '/') {
+      url.pathname = '/demo'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
     url.pathname = '/login'
     url.search = ''
     url.searchParams.set('next', pathname)
