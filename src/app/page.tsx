@@ -14,10 +14,10 @@ import type { ConversionAnalytics } from '@/types'
 export const dynamic = 'force-dynamic'
 
 const CATEGORY_COLORS: Record<string, string> = {
-  A: 'bg-green-100 text-green-800',
-  B: 'bg-blue-100 text-blue-800',
-  C: 'bg-yellow-100 text-yellow-800',
-  D: 'bg-red-100 text-red-800',
+  A: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+  B: 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200',
+  C: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+  D: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -31,13 +31,22 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  new: 'bg-gray-100 text-gray-700',
-  awaiting_reply: 'bg-orange-100 text-orange-700',
-  qualifying: 'bg-blue-100 text-blue-700',
-  scoring: 'bg-purple-100 text-purple-700',
-  booked: 'bg-green-100 text-green-800',
-  disqualified: 'bg-red-100 text-red-700',
-  cold: 'bg-gray-100 text-gray-500',
+  new: 'bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200',
+  awaiting_reply: 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200',
+  qualifying: 'bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-200',
+  scoring: 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200',
+  booked: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+  disqualified: 'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
+  cold: 'bg-slate-100 text-slate-400 ring-1 ring-inset ring-slate-200',
+}
+
+function initials(name: string | null): string {
+  if (!name) return '?'
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('')
 }
 
 export default async function DashboardPage({
@@ -62,13 +71,13 @@ export default async function DashboardPage({
 
       {/* Répartition par catégorie */}
       {stats && (
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-wrap gap-2">
           {(['A', 'B', 'C', 'D'] as const).map((cat) => (
             <div
               key={cat}
-              className={`px-4 py-2 rounded-full text-sm font-medium ${CATEGORY_COLORS[cat]}`}
+              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${CATEGORY_COLORS[cat]}`}
             >
-              {cat} — {stats.by_category[cat]}
+              {cat} · {stats.by_category[cat]}
             </div>
           ))}
         </div>
@@ -76,54 +85,59 @@ export default async function DashboardPage({
 
       {/* Liste des leads */}
       <div>
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
-          <h2 className="text-base font-semibold">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold tracking-tight">
             Leads ({list.total})
           </h2>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-slate-400">
             Page {pagination.page} / {pagination.totalPages}
           </span>
         </div>
 
         <FilterBar filters={filters} />
 
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {leads.length === 0 ? (
-            <div className="px-6 py-12 text-center text-gray-400 text-sm">
+            <div className="px-6 py-14 text-center text-sm text-slate-400">
               Aucun lead ne correspond à ces critères.
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Nom</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Email</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Statut</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Score</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
+              <thead className="border-b border-slate-200 bg-slate-50/70">
+                <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
+                  <th className="px-4 py-3 font-medium">Nom</th>
+                  <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Statut</th>
+                  <th className="px-4 py-3 font-medium">Score</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={lead.id} className="transition-colors hover:bg-slate-50/70">
                     <td className="px-4 py-3">
                       <Link
                         href={`/leads/${lead.id}`}
-                        className="font-medium text-gray-900 hover:underline"
+                        className="group flex items-center gap-3"
                       >
-                        {lead.name ?? '—'}
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-indigo-50 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-100">
+                          {initials(lead.name)}
+                        </span>
+                        <span className="font-medium text-slate-900 group-hover:text-indigo-700 group-hover:underline">
+                          {lead.name ?? '—'}
+                        </span>
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{lead.email ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-500">{lead.email ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[lead.status] ?? ''}`}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[lead.status] ?? ''}`}
                       >
                         {STATUS_LABELS[lead.status] ?? lead.status}
                       </span>
                       {lead.last_error && (
                         <span
-                          className="ml-1 px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700"
+                          className="ml-1.5 rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-200"
                           title={lead.last_error}
                         >
                           ⚠ erreur
@@ -133,15 +147,15 @@ export default async function DashboardPage({
                     <td className="px-4 py-3">
                       {lead.score_category ? (
                         <span
-                          className={`px-2 py-1 rounded text-xs font-bold ${CATEGORY_COLORS[lead.score_category]}`}
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${CATEGORY_COLORS[lead.score_category]}`}
                         >
-                          {lead.score_category} — {lead.score}
+                          {lead.score_category} · {lead.score}
                         </span>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-slate-400">
                       {new Date(lead.created_at).toLocaleDateString('fr-FR')}
                     </td>
                   </tr>
@@ -152,29 +166,29 @@ export default async function DashboardPage({
         </div>
 
         {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 text-sm">
+          <div className="mt-4 flex items-center justify-between text-sm">
             {pagination.hasPrev ? (
               <Link
                 href={`/${filtersToQuery(filters, pagination.page - 1)}`}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
                 ← Précédent
               </Link>
             ) : (
-              <span className="px-3 py-1.5 text-gray-300">← Précédent</span>
+              <span className="px-3.5 py-2 text-slate-300">← Précédent</span>
             )}
-            <span className="text-gray-400">
+            <span className="text-slate-400">
               Page {pagination.page} / {pagination.totalPages}
             </span>
             {pagination.hasNext ? (
               <Link
                 href={`/${filtersToQuery(filters, pagination.page + 1)}`}
-                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50"
+                className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
                 Suivant →
               </Link>
             ) : (
-              <span className="px-3 py-1.5 text-gray-300">Suivant →</span>
+              <span className="px-3.5 py-2 text-slate-300">Suivant →</span>
             )}
           </div>
         )}
@@ -195,56 +209,58 @@ function FilterBar({ filters }: { filters: LeadFilters }) {
     cold: 'Froid',
   }
   const hasFilter = filters.status || filters.category || filters.search
+  const inputCls =
+    'rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30'
 
   return (
-    <form method="get" className="flex flex-wrap items-end gap-3 mb-4">
-      <div className="flex-1 min-w-[180px]">
-        <label className="block text-xs text-gray-500 mb-1" htmlFor="q">Recherche</label>
+    <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
+      <div className="min-w-[180px] flex-1">
+        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="q">
+          Recherche
+        </label>
         <input
           id="q"
           name="q"
           type="text"
           defaultValue={filters.search}
           placeholder="Nom ou email…"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`${inputCls} w-full`}
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-500 mb-1" htmlFor="status">Statut</label>
-        <select
-          id="status"
-          name="status"
-          defaultValue={filters.status ?? ''}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="status">
+          Statut
+        </label>
+        <select id="status" name="status" defaultValue={filters.status ?? ''} className={inputCls}>
           <option value="">Tous</option>
           {LEAD_STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABELS_FORM[s]}</option>
+            <option key={s} value={s}>
+              {STATUS_LABELS_FORM[s]}
+            </option>
           ))}
         </select>
       </div>
       <div>
-        <label className="block text-xs text-gray-500 mb-1" htmlFor="category">Catégorie</label>
-        <select
-          id="category"
-          name="category"
-          defaultValue={filters.category ?? ''}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
+        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="category">
+          Catégorie
+        </label>
+        <select id="category" name="category" defaultValue={filters.category ?? ''} className={inputCls}>
           <option value="">Toutes</option>
           {SCORE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
         </select>
       </div>
       <button
         type="submit"
-        className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+        className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700"
       >
         Filtrer
       </button>
       {hasFilter && (
-        <Link href="/" className="text-sm text-gray-500 hover:text-gray-900 px-2 py-2">
+        <Link href="/" className="px-2 py-2 text-sm text-slate-500 hover:text-slate-900">
           Réinitialiser
         </Link>
       )}
@@ -263,12 +279,20 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-xl border p-4 ${highlight ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}
+      className={`rounded-2xl border p-4 shadow-sm ${
+        highlight
+          ? 'border-indigo-200 bg-gradient-to-br from-indigo-50 to-white'
+          : 'border-slate-200 bg-white'
+      }`}
     >
-      <div className={`text-2xl font-bold ${highlight ? 'text-green-700' : 'text-gray-900'}`}>
+      <div
+        className={`text-2xl font-bold tracking-tight ${
+          highlight ? 'text-indigo-700' : 'text-slate-900'
+        }`}
+      >
         {value}
       </div>
-      <div className="text-sm text-gray-500 mt-1">{label}</div>
+      <div className="mt-1 text-sm text-slate-500">{label}</div>
     </div>
   )
 }
@@ -290,23 +314,26 @@ function ConversionSection({ analytics }: { analytics: ConversionAnalytics }) {
   return (
     <div className="space-y-4">
       {/* Funnel */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-base font-semibold mb-4">Conversion</h2>
-        <div className="space-y-2">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-base font-semibold tracking-tight">Conversion</h2>
+        <p className="mb-5 mt-0.5 text-xs text-slate-400">
+          Du lead reçu au rendez-vous confirmé
+        </p>
+        <div className="space-y-2.5">
           {steps.map((step, i) => (
             <div key={step.label} className="flex items-center gap-3">
-              <div className="w-24 text-sm text-gray-600 shrink-0">{step.label}</div>
-              <div className="flex-1 bg-gray-100 rounded-full h-7 overflow-hidden">
+              <div className="w-24 shrink-0 text-sm text-slate-600">{step.label}</div>
+              <div className="h-8 flex-1 overflow-hidden rounded-lg bg-slate-100">
                 <div
-                  className={`h-full rounded-full flex items-center px-3 text-sm font-medium text-white ${
-                    i === steps.length - 1 ? 'bg-green-600' : 'bg-blue-500'
+                  className={`flex h-full items-center rounded-lg px-3 text-sm font-semibold text-white ${
+                    i === steps.length - 1 ? 'bg-emerald-500' : 'bg-indigo-500'
                   }`}
                   style={{ width: `${Math.max((step.value / max) * 100, 8)}%` }}
                 >
                   {step.value}
                 </div>
               </div>
-              <div className="w-20 text-right text-sm text-gray-400 shrink-0">
+              <div className="w-20 shrink-0 text-right text-sm text-slate-400">
                 {step.rate === null ? '' : `${formatRate(step.rate)} →`}
               </div>
             </div>
@@ -315,7 +342,7 @@ function ConversionSection({ analytics }: { analytics: ConversionAnalytics }) {
       </div>
 
       {/* Métriques clés */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
           label="Conversion globale"
           value={formatRate(rates.overall_conversion)}
