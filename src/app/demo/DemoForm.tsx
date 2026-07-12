@@ -44,9 +44,14 @@ export default function DemoForm({ clientId }: { clientId: string }) {
 
   if (state === 'done') {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
-        <p className="font-semibold text-green-800 text-lg">C&apos;est parti !</p>
-        <p className="text-sm text-green-800 mt-2">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+        <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-emerald-100">
+          <svg width="18" height="18" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M2.5 6.5L5 9l4.5-6" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <p className="font-semibold text-emerald-800 text-lg">C&apos;est parti !</p>
+        <p className="text-sm text-emerald-800 mt-2">
           Ouvrez votre boîte mail : l&apos;agent vous répond d&apos;ici une minute.
           Répondez-lui comme un vrai prospect pour voir la qualification,
           le scoring et la prise de rendez-vous en action.
@@ -56,7 +61,7 @@ export default function DemoForm({ clientId }: { clientId: string }) {
   }
 
   const inputCls =
-    'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+    'w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30'
 
   return (
     <form onSubmit={submit} className="space-y-3">
@@ -105,12 +110,12 @@ export default function DemoForm({ clientId }: { clientId: string }) {
       <button
         type="submit"
         disabled={state === 'loading'}
-        className="w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+        className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-50"
       >
         {state === 'loading' ? 'Envoi…' : 'Recevoir la réponse de l’agent'}
       </button>
       {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-xs text-slate-400 text-center">
         Démo réelle : un email automatique vous sera envoyé. Aucune inscription, aucune donnée revendue.
       </p>
     </form>
