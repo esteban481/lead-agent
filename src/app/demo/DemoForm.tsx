@@ -116,7 +116,10 @@ export default function DemoForm({ clientId }: { clientId: string }) {
       </button>
       {error && <p className="text-sm text-red-600 text-center">{error}</p>}
       <p className="text-xs text-slate-400 text-center">
-        Démo réelle : un email automatique vous sera envoyé. Aucune inscription, aucune donnée revendue.
+        Démo réelle : un email automatique vous sera envoyé. Aucune inscription, aucune donnée revendue.{' '}
+        <a href="/confidentialite" className="underline hover:text-slate-600">
+          Confidentialité
+        </a>
       </p>
     </form>
   )

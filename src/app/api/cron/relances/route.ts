@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
-import { brandingFromConfig } from '@/lib/email-template'
+import { brandingFromConfig, appendOptOutNotice } from '@/lib/email-template'
 import { generateRelanceEmail } from '@/lib/ai/generate'
 import { buildReplyTo } from '@/lib/email-utils'
 import { getHourInTimeZone } from '@/lib/time'
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
         to: lead.email,
         from: typedClient.config.from_email,
         subject,
-        text: body,
+        text: appendOptOutNotice(body),
         branding: brandingFromConfig(typedClient.config),
         replyTo: buildReplyTo(lead.id),
       })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderEmailHtml, brandingFromConfig } from './email-template'
+import { renderEmailHtml, brandingFromConfig, appendOptOutNotice } from './email-template'
 import type { ClientConfig } from '@/types'
 
 describe('renderEmailHtml', () => {
@@ -70,6 +70,25 @@ describe('renderEmailHtml — branding', () => {
     const html = renderEmailHtml('Bonjour', { logoUrl: 'http://insecure/logo.png', companyName: 'Acme' })
     expect(html).not.toContain('<img')
     expect(html).toContain('Acme')
+  })
+})
+
+describe('appendOptOutNotice', () => {
+  it('ajoute la mention STOP en pied de texte', () => {
+    const out = appendOptOutNotice('Bonjour Jean,\n\nVoici le lien.')
+    expect(out).toContain('Répondez simplement STOP')
+    expect(out.startsWith('Bonjour Jean,')).toBe(true)
+  })
+
+  it('ne double jamais la mention', () => {
+    const once = appendOptOutNotice('corps')
+    const twice = appendOptOutNotice(once)
+    expect(twice.match(/STOP/g)?.length).toBe(1)
+  })
+
+  it('la mention est rendue dans le HTML', () => {
+    const html = renderEmailHtml(appendOptOutNotice('Bonjour'))
+    expect(html).toContain('Répondez simplement STOP')
   })
 })
 

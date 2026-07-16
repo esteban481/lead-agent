@@ -4,7 +4,7 @@ import { sendEmail } from '@/lib/resend'
 import { verifyResendWebhook } from '@/lib/webhook-security'
 import { claimWebhook, releaseWebhook } from '@/lib/idempotency'
 import { buildReplyTo } from '@/lib/email-utils'
-import { brandingFromConfig } from '@/lib/email-template'
+import { brandingFromConfig, appendOptOutNotice } from '@/lib/email-template'
 import { notifyCommercial } from '@/lib/notify'
 import { logger, errContext } from '@/lib/logger'
 import { parseLeadMessage } from '@/lib/ai/parse'
@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
           scoreResult.summary,
           typedClient.sector
         )
-        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
+        await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config, true)
 
         // Alerte le commercial sur les leads chauds (A/B)
         if (scoreResult.category === 'A' || scoreResult.category === 'B') {
@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
         typedClient.config,
         typedClient.sector
       )
-      await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config)
+      await sendAndLogEmail(lead.id, lead.email!, typedClient.config.from_email, subject, body, typedClient.config, true)
 
       await supabase.from('scheduled_relances').insert({
         lead_id: lead.id,
@@ -356,14 +356,17 @@ async function sendAndLogEmail(
   from: string,
   subject: string,
   body: string,
-  config?: Client['config']
+  config?: Client['config'],
+  // Mention « répondez STOP » : oui pour qualification/booking (emails de
+  // sollicitation), non pour les clôtures (disqualification, adieu poli).
+  withOptOutNotice = false
 ) {
   const replyTo = buildReplyTo(leadId)
   const { id: resendId } = await sendEmail({
     to,
     from,
     subject,
-    text: body,
+    text: withOptOutNotice ? appendOptOutNotice(body) : body,
     branding: brandingFromConfig(config),
     replyTo,
   })
