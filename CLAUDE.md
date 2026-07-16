@@ -49,6 +49,7 @@ Toutes les fonctions IA retournent du JSON avec fallback en cas d'erreur.
 | `POST /api/webhook/form?client_id=xxx` | Reçoit lead formulaire, normalise, déduplique, envoie email qualification, planifie relances |
 | `POST /api/webhook/email-inbound` | Reçoit réponses email (Resend event `email.received`), parse, score si complet |
 | `GET /api/cron/relances` | Vercel Cron 9h/jour — envoie relances pending, passe en cold après step 3 |
+| `GET /api/cron/rapport-hebdo` | Vercel Cron lundi 7h UTC — bilan hebdo chiffré emailé au notify_email de chaque client |
 | `GET /api/leads` | Liste leads dashboard |
 | `GET /api/leads/[id]` | Fiche lead complète |
 | `GET /api/stats` | KPIs agrégés |
