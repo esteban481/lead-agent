@@ -42,6 +42,7 @@ src/
 │   ├── password.ts             ← Hachage mots de passe PBKDF2 (Web Crypto)
 │   ├── queries.ts              ← Requêtes dashboard partagées, scopées par client_id
 │   ├── analytics.ts            ← computeAnalytics : funnel + taux + temps (logique pure)
+│   ├── weekly-report.ts        ← Rapport hebdo client (déterministe, réutilise analytics)
 │   ├── webhook-security.ts     ← Vérification signatures webhooks (Resend/Svix, Cal.com)
 │   ├── idempotency.ts          ← Garde anti-doublons des webhooks (table processed_webhooks)
 │   ├── notify.ts               ← Alertes email au commercial (lead chaud, RDV confirmé)
@@ -308,6 +309,7 @@ CRON_SECRET                → chaîne aléatoire longue (partagé équipe)
 Si `config.notify_email` est renseigné pour un client, un email d'alerte est envoyé au commercial :
 - **Lead chaud** : quand un lead est scoré A ou B (au moment où le lien de RDV lui est envoyé)
 - **RDV confirmé** : quand le webhook Cal.com confirme une réservation
+- **Rapport hebdomadaire** : chaque lundi matin (cron `/api/cron/rapport-hebdo`), bilan chiffré des 7 derniers jours (leads reçus/contactés/qualifiés, RDV confirmés sur la période, temps de première réponse). Contenu déterministe (`src/lib/weekly-report.ts`, aucun appel Claude).
 
 Implémenté dans `src/lib/notify.ts`. No-op si `notify_email` absent. Un échec d'alerte ne bloque jamais le flux principal.
 
