@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendEmail } from '@/lib/resend'
-import { brandingFromConfig } from '@/lib/email-template'
+import { brandingFromConfig, appendOptOutNotice } from '@/lib/email-template'
 import { buildReplyTo } from '@/lib/email-utils'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { generateQualificationEmail } from '@/lib/ai/generate'
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         to: email,
         from: typedClient.config.from_email,
         subject,
-        text: body,
+        text: appendOptOutNotice(body),
         branding: brandingFromConfig(typedClient.config),
         replyTo: buildReplyTo(typedLead.id),
         headers: { 'Message-ID': `<${messageId}>` },

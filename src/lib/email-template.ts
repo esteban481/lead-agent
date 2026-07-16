@@ -86,3 +86,18 @@ export function brandingFromConfig(config?: ClientConfig): EmailBranding {
   const b = config?.branding
   return { companyName: b?.company_name, color: b?.color, logoUrl: b?.logo_url }
 }
+
+// ============================================================
+// Mention de désinscription (hygiène légale / RGPD).
+// Ajoutée par le CODE (déterministe, jamais par le LLM) aux emails
+// automatiques adressés au prospect : qualification, booking,
+// relances. Le webhook inbound comprend « STOP » (opt-out définitif),
+// donc la promesse est tenue côté machine.
+// ============================================================
+export const OPT_OUT_NOTICE =
+  'Vous ne souhaitez plus être contacté ? Répondez simplement STOP à cet email.'
+
+export function appendOptOutNotice(text: string): string {
+  if (text.includes(OPT_OUT_NOTICE)) return text // jamais en double
+  return `${text}\n\n—\n${OPT_OUT_NOTICE}`
+}

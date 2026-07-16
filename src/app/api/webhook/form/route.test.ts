@@ -112,6 +112,9 @@ describe('webhook form — création', () => {
 
     expect(find('leads', 'insert')).toBeDefined()
     expect(sendEmail).toHaveBeenCalledOnce()
+    // Mention de désinscription présente dans l'email envoyé (hygiène légale)
+    const sent = (sendEmail as ReturnType<typeof vi.fn>).mock.calls[0][0] as { text: string }
+    expect(sent.text).toContain('STOP')
     expect(find('messages', 'insert')).toBeDefined()
 
     // statut → awaiting_reply

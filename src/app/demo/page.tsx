@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import DemoForm from './DemoForm'
 
 export const dynamic = 'force-dynamic'
@@ -192,8 +193,11 @@ export default function DemoPage() {
         </div>
       </section>
 
-      <footer className="pb-2 text-center text-xs text-slate-400">
-        Lead Agent — plus de rendez-vous qualifiés, sans effort.
+      <footer className="space-x-3 pb-2 text-center text-xs text-slate-400">
+        <span>Lead Agent — plus de rendez-vous qualifiés, sans effort.</span>
+        <Link href="/confidentialite" className="underline hover:text-slate-600">
+          Confidentialité &amp; mentions légales
+        </Link>
       </footer>
     </div>
   )
