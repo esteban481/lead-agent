@@ -89,9 +89,22 @@ export default async function DashboardPage({
           <h2 className="text-base font-semibold tracking-tight">
             Leads ({list.total})
           </h2>
-          <span className="text-sm text-slate-400">
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
+          <div className="flex items-center gap-3">
+            {list.total > 0 && (
+              <a
+                href={`/api/leads/export${filtersToQuery(filters, 1)}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                  <path d="M7.5 1.5v8m0 0L4.5 6.5m3 3l3-3M2.5 12.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Exporter CSV
+              </a>
+            )}
+            <span className="text-sm text-slate-400">
+              Page {pagination.page} / {pagination.totalPages}
+            </span>
+          </div>
         </div>
 
         <FilterBar filters={filters} />
