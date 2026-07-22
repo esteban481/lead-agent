@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DEFAULT_CLIENT_CONFIG } from '@/lib/client-config'
+import { webhookEndpoint, integrationSnippet } from '@/lib/integration'
 
 type ClientRow = {
   id: string
@@ -110,10 +111,68 @@ function ClientCard({ client }: { client: ClientRow }) {
         <span className="text-xs text-gray-400 font-mono">{client.id.slice(0, 8)}…</span>
       </summary>
       <div className="px-6 pb-6 space-y-6 border-t border-gray-100 pt-4">
+        <ClientIntegration clientId={client.id} />
         <EditConfig client={client} />
         <SetLogin clientId={client.id} />
       </div>
     </details>
+  )
+}
+
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      /* clipboard indisponible : l'utilisateur peut copier à la main */
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+    >
+      {copied ? 'Copié ✓' : label}
+    </button>
+  )
+}
+
+function ClientIntegration({ clientId }: { clientId: string }) {
+  // window.location.origin = l'origine déployée, sans variable d'env.
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const endpoint = webhookEndpoint(origin, clientId)
+  const snippet = integrationSnippet(origin, clientId)
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-gray-700">Intégration du formulaire</h3>
+      </div>
+      <p className="text-xs text-slate-500">
+        Endpoint qui reçoit les leads de ce client :
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100">
+          {endpoint}
+        </code>
+        <CopyButton text={endpoint} label="Copier" />
+      </div>
+      <p className="mt-2 text-xs text-slate-500">
+        Snippet HTML à coller sur le site du client (formulaire + envoi) :
+      </p>
+      <div className="relative">
+        <pre className="max-h-56 overflow-auto rounded-lg bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">
+          {snippet}
+        </pre>
+        <div className="mt-2">
+          <CopyButton text={snippet} label="Copier le snippet" />
+        </div>
+      </div>
+    </div>
   )
 }
 
