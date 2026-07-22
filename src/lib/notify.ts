@@ -1,4 +1,5 @@
 import { sendEmail } from '@/lib/resend'
+import { logger } from '@/lib/logger'
 import type { ClientConfig, Lead } from '@/types'
 
 // ============================================================
@@ -38,6 +39,6 @@ export async function notifyCommercial(
       text: body,
     })
   } catch (err) {
-    console.warn('[notify] Échec alerte commercial pour lead', lead.id, err)
+    logger.warn('échec alerte commercial', { lead_id: lead.id, error: (err as Error).message })
   }
 }

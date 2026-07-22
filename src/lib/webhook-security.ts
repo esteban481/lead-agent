@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { logger } from '@/lib/logger'
 
 // ============================================================
 // Vérification des signatures de webhooks entrants.
@@ -19,7 +20,7 @@ export function verifyResendWebhook(
 ): { valid: boolean; reason?: string } {
   const secret = process.env.RESEND_WEBHOOK_SECRET
   if (!secret) {
-    console.warn('[webhook-security] RESEND_WEBHOOK_SECRET non configuré — vérification ignorée')
+    logger.warn('RESEND_WEBHOOK_SECRET non configuré — vérification ignorée', { webhook: 'inbound' })
     return { valid: true }
   }
 
@@ -62,7 +63,7 @@ export function verifyCalWebhook(
 ): { valid: boolean; reason?: string } {
   const secret = process.env.CAL_WEBHOOK_SECRET
   if (!secret) {
-    console.warn('[webhook-security] CAL_WEBHOOK_SECRET non configuré — vérification ignorée')
+    logger.warn('CAL_WEBHOOK_SECRET non configuré — vérification ignorée', { webhook: 'cal' })
     return { valid: true }
   }
 

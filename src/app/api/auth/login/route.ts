@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { verifyPassword, timingSafeEqualHex } from '@/lib/password'
 import { createSession, SESSION_COOKIE } from '@/lib/session'
+import { logger } from '@/lib/logger'
 
 // POST /api/auth/login  { email, password }
 // Authentifie un admin (identifiants env) ou un client (table clients)
@@ -9,7 +10,7 @@ import { createSession, SESSION_COOKIE } from '@/lib/session'
 export async function POST(req: NextRequest) {
   const secret = process.env.SESSION_SECRET
   if (!secret) {
-    console.error('[auth] SESSION_SECRET non configuré')
+    logger.error('SESSION_SECRET non configuré', { route: 'auth-login' })
     return NextResponse.json({ error: 'Configuration serveur incomplète' }, { status: 500 })
   }
 

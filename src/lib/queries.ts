@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { computeAnalytics } from '@/lib/analytics'
 import { buildPagination, PAGE_SIZE, type LeadFilters } from '@/lib/leads-filter'
+import { logger } from '@/lib/logger'
 import type {
   Client,
   ConversionAnalytics,
@@ -18,7 +19,7 @@ export async function getClientsAdmin(): Promise<Pick<Client, 'id' | 'name' | 's
     .select('id, name, sector, config, created_at')
     .order('created_at', { ascending: false })
   if (error) {
-    console.error('getClientsAdmin error:', error)
+    logger.error('getClientsAdmin', { query: 'clients', error: error.message })
     return []
   }
   return (data ?? []) as Pick<Client, 'id' | 'name' | 'sector' | 'config' | 'created_at'>[]
@@ -40,7 +41,7 @@ export async function getLeads(clientId: string | null = null, limit = 100): Pro
 
   const { data, error } = await query
   if (error) {
-    console.error('getLeads error:', error)
+    logger.error('getLeads', { query: 'leads', error: error.message })
     return []
   }
   return (data ?? []) as Lead[]
@@ -68,7 +69,7 @@ export async function getLeadsList(
 
   const { data, error, count } = await query
   if (error) {
-    console.error('getLeadsList error:', error)
+    logger.error('getLeadsList', { query: 'leads', error: error.message })
     return { leads: [], total: 0 }
   }
   return { leads: (data ?? []) as Lead[], total: count ?? 0 }
@@ -96,7 +97,7 @@ export async function getLeadsForExport(
 
   const { data, error } = await query
   if (error) {
-    console.error('getLeadsForExport error:', error)
+    logger.error('getLeadsForExport', { query: 'leads', error: error.message })
     return []
   }
   return (data ?? []) as Lead[]
@@ -108,7 +109,7 @@ export async function getStats(clientId: string | null = null): Promise<Dashboar
   const { data: leads, error } = await query
 
   if (error) {
-    console.error('getStats error:', error)
+    logger.error('getStats', { query: 'leads', error: error.message })
     return null
   }
 
@@ -149,7 +150,7 @@ export async function getAnalytics(clientId: string | null = null): Promise<Conv
     await Promise.all([leadsQuery, msgQuery])
 
   if (leadsError || msgError) {
-    console.error('getAnalytics error:', leadsError ?? msgError)
+    logger.error('getAnalytics', { query: 'analytics', error: (leadsError ?? msgError)?.message })
     return null
   }
 
