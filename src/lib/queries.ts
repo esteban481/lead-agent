@@ -74,6 +74,34 @@ export async function getLeadsList(
   return { leads: (data ?? []) as Lead[], total: count ?? 0 }
 }
 
+// Leads filtrés pour l'export CSV : mêmes filtres que la liste, sans
+// pagination (plafonné pour éviter un export démesuré).
+export async function getLeadsForExport(
+  clientId: string | null,
+  filters: LeadFilters,
+  cap = 5000
+): Promise<Lead[]> {
+  let query = supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(cap)
+
+  if (clientId) query = query.eq('client_id', clientId)
+  if (filters.status) query = query.eq('status', filters.status)
+  if (filters.category) query = query.eq('score_category', filters.category)
+  if (filters.search) {
+    query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
+  }
+
+  const { data, error } = await query
+  if (error) {
+    console.error('getLeadsForExport error:', error)
+    return []
+  }
+  return (data ?? []) as Lead[]
+}
+
 export async function getStats(clientId: string | null = null): Promise<DashboardStats | null> {
   let query = supabase.from('leads').select('status, score_category, created_at')
   if (clientId) query = query.eq('client_id', clientId)
