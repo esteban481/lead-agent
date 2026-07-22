@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { logger } from '@/lib/logger'
 
 // ============================================================
 // Idempotence des webhooks.
@@ -42,7 +43,7 @@ export async function claimWebhook(
   if (error.code === '23505') return 'duplicate'
 
   // 42P01 = table absente (migration pas encore appliquée) → dégradation gracieuse
-  console.warn('[idempotency] garde indisponible, traitement sans dédup:', error.code, error.message)
+  logger.warn('idempotence indisponible, traitement sans dédup', { code: error.code, error: error.message })
   return 'unavailable'
 }
 
@@ -57,6 +58,6 @@ export async function releaseWebhook(
     .delete()
     .eq('id', key(source, eventId))
   if (error) {
-    console.warn('[idempotency] échec libération clé:', error.code, error.message)
+    logger.warn('idempotence : échec libération clé', { code: error.code, error: error.message })
   }
 }

@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { logger } from '@/lib/logger'
 
 // Le SDK Anthropic retente automatiquement les erreurs transitoires
 // (408/409/429 et 5xx, dont 529 "overloaded") avec un backoff
@@ -37,7 +38,7 @@ export async function callClaude(
     // Les webhooks renvoient alors 500 → le provider rejoue, et la garde
     // d'idempotence (processed_webhooks) rend ce rejeu sûr.
     const status = err instanceof Anthropic.APIError ? err.status : undefined
-    console.error('[claude] appel échoué', { status, message: (err as Error).message })
+    logger.error('appel Claude échoué', { status, error: (err as Error).message })
     throw err
   }
 }
