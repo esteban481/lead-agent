@@ -39,8 +39,8 @@ export default function LeadNotes({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <h2 className="font-semibold mb-4">Notes internes</h2>
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 font-semibold tracking-tight">Notes internes</h2>
       <textarea
         value={notes}
         onChange={(e) => {
@@ -49,18 +49,18 @@ export default function LeadNotes({
         }}
         rows={4}
         placeholder="Contexte, points d'attention, suivi téléphonique…"
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
       />
-      <div className="flex items-center gap-3 mt-2">
+      <div className="mt-2 flex items-center gap-3">
         <button
           onClick={save}
           disabled={loading}
-          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:opacity-50"
         >
           {loading ? 'Enregistrement…' : 'Enregistrer'}
         </button>
-        {saved && <span className="text-sm text-green-700">Enregistré.</span>}
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {saved && <span className="text-sm text-emerald-700">Enregistré.</span>}
+        {error && <span className="text-sm text-rose-600">{error}</span>}
       </div>
     </div>
   )
