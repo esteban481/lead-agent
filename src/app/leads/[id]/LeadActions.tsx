@@ -44,7 +44,8 @@ export default function LeadActions({
     }
   }
 
-  const btn = 'px-3 py-1.5 rounded-lg border text-sm font-medium disabled:opacity-50 transition-colors'
+  const btn =
+    'rounded-xl border px-3.5 py-1.5 text-sm font-medium shadow-sm transition disabled:opacity-50'
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -52,7 +53,7 @@ export default function LeadActions({
         <button
           onClick={() => run('book')}
           disabled={loading !== null}
-          className={`${btn} border-green-200 bg-green-50 text-green-800 hover:bg-green-100`}
+          className={`${btn} border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100`}
         >
           {loading === 'book' ? '…' : 'Marquer RDV pris'}
         </button>
@@ -61,7 +62,7 @@ export default function LeadActions({
         <button
           onClick={() => run('disqualify')}
           disabled={loading !== null}
-          className={`${btn} border-red-200 bg-red-50 text-red-800 hover:bg-red-100`}
+          className={`${btn} border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100`}
         >
           {loading === 'disqualify' ? '…' : 'Disqualifier'}
         </button>
@@ -70,12 +71,12 @@ export default function LeadActions({
         <button
           onClick={() => run('reopen')}
           disabled={loading !== null}
-          className={`${btn} border-gray-200 bg-white text-gray-700 hover:bg-gray-50`}
+          className={`${btn} border-slate-200 bg-white text-slate-700 hover:bg-slate-50`}
         >
           {loading === 'reopen' ? '…' : 'Rouvrir'}
         </button>
       )}
-      {error && <span className="text-sm text-red-600">{error}</span>}
+      {error && <span className="text-sm text-rose-600">{error}</span>}
     </div>
   )
 }
