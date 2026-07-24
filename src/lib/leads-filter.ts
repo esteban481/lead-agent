@@ -77,6 +77,18 @@ export function buildPagination(total: number, page: number, pageSize = PAGE_SIZ
   }
 }
 
+// Lien de bascule d'un filtre catégorie : active la catégorie, ou la
+// retire si elle est déjà active (clic sur la pastille = toggle).
+// Retour à la page 1 puisque le jeu de résultats change.
+export function toggleCategoryQuery(filters: LeadFilters, category: ScoreCategory): string {
+  const next: LeadFilters = {
+    ...filters,
+    category: filters.category === category ? null : category,
+    page: 1,
+  }
+  return filtersToQuery(next, 1)
+}
+
 // Sérialise les filtres en query string (pour les liens de pagination).
 export function filtersToQuery(filters: LeadFilters, page: number): string {
   const sp = new URLSearchParams()

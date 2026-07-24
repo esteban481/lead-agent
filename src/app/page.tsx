@@ -5,10 +5,12 @@ import {
   parseFilters,
   buildPagination,
   filtersToQuery,
+  toggleCategoryQuery,
   LEAD_STATUSES,
   SCORE_CATEGORIES,
   type LeadFilters,
 } from '@/lib/leads-filter'
+import { relativeDay } from '@/lib/format'
 import type { ConversionAnalytics } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -55,7 +57,8 @@ export default async function DashboardPage({
   searchParams: Promise<{ status?: string; category?: string; q?: string; page?: string }>
 }) {
   const filters = parseFilters(await searchParams)
-  const scope = scopeOf(await getPrincipal())
+  const principal = await getPrincipal()
+  const scope = scopeOf(principal)
   const [list, stats, analytics] = await Promise.all([
     getLeadsList(scope, filters),
     getStats(scope),
@@ -66,20 +69,54 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-8">
+      {/* En-tête de page */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Vue d&apos;ensemble</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {principal?.role === 'admin'
+            ? 'Tous vos clients — activité de l’agent et pipeline de leads.'
+            : 'Activité de votre agent et pipeline de leads.'}
+        </p>
+      </div>
+
       {/* Conversion : funnel + métriques clés */}
       {analytics && <ConversionSection analytics={analytics} />}
 
-      {/* Répartition par catégorie */}
+      {/* Répartition par score — pastilles cliquables (filtre) */}
       {stats && (
-        <div className="flex flex-wrap gap-2">
-          {(['A', 'B', 'C', 'D'] as const).map((cat) => (
-            <div
-              key={cat}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${CATEGORY_COLORS[cat]}`}
-            >
-              {cat} · {stats.by_category[cat]}
-            </div>
-          ))}
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-tight text-slate-900">
+              Répartition par score
+            </h2>
+            {filters.category && (
+              <Link
+                href={`/${toggleCategoryQuery(filters, filters.category)}`}
+                className="text-xs text-slate-500 hover:text-slate-900"
+              >
+                Retirer le filtre
+              </Link>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SCORE_CATEGORIES.map((cat) => {
+              const active = filters.category === cat
+              return (
+                <Link
+                  key={cat}
+                  href={`/${toggleCategoryQuery(filters, cat)}`}
+                  aria-pressed={active}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${CATEGORY_COLORS[cat]} ${
+                    active
+                      ? 'ring-2 ring-offset-1 ring-slate-400'
+                      : 'opacity-90 hover:opacity-100'
+                  }`}
+                >
+                  {cat} · {stats.by_category[cat]}
+                </Link>
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -111,18 +148,29 @@ export default async function DashboardPage({
 
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           {leads.length === 0 ? (
-            <div className="px-6 py-14 text-center text-sm text-slate-400">
-              Aucun lead ne correspond à ces critères.
+            <div className="px-6 py-16 text-center">
+              <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
+                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </span>
+              <p className="text-sm font-medium text-slate-600">Aucun lead ne correspond à ces critères.</p>
+              <Link href="/" className="mt-2 inline-block text-sm text-indigo-600 hover:underline">
+                Réinitialiser les filtres
+              </Link>
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/70">
                 <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
                   <th className="px-4 py-3 font-medium">Nom</th>
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">Statut</th>
                   <th className="px-4 py-3 font-medium">Score</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
+                  <th className="px-4 py-3 font-medium">Reçu</th>
+                  <th className="px-2 py-3" aria-label="Ouvrir" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -168,13 +216,28 @@ export default async function DashboardPage({
                         <span className="text-slate-300">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
-                      {new Date(lead.created_at).toLocaleDateString('fr-FR')}
+                    <td
+                      className="whitespace-nowrap px-4 py-3 text-slate-400"
+                      title={new Date(lead.created_at).toLocaleString('fr-FR')}
+                    >
+                      {relativeDay(lead.created_at)}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <Link
+                        href={`/leads/${lead.id}`}
+                        aria-label={`Ouvrir la fiche de ${lead.name ?? 'ce lead'}`}
+                        className="inline-block rounded-lg p-1.5 text-slate-300 transition hover:bg-slate-100 hover:text-slate-600"
+                      >
+                        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                          <path d="M5.5 3.5L9.5 7.5L5.5 11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
