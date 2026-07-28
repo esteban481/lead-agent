@@ -4,6 +4,7 @@ import {
   parseFilters,
   buildPagination,
   filtersToQuery,
+  toggleCategoryQuery,
   PAGE_SIZE,
 } from './leads-filter'
 
@@ -73,5 +74,27 @@ describe('filtersToQuery', () => {
   })
   it('omet la page 1 et les filtres vides', () => {
     expect(filtersToQuery({ status: null, category: null, search: '', page: 1 }, 1)).toBe('')
+  })
+})
+
+describe('toggleCategoryQuery', () => {
+  const base = { status: null, category: null, search: '', page: 3 } as const
+
+  it('active une catégorie et revient page 1', () => {
+    const q = toggleCategoryQuery({ ...base }, 'A')
+    expect(q).toContain('category=A')
+    expect(q).not.toContain('page=')
+  })
+
+  it('retire la catégorie si déjà active (toggle)', () => {
+    const q = toggleCategoryQuery({ ...base, category: 'A' }, 'A')
+    expect(q).not.toContain('category=')
+  })
+
+  it('conserve les autres filtres', () => {
+    const q = toggleCategoryQuery({ status: 'booked', category: null, search: 'jean', page: 1 }, 'B')
+    expect(q).toContain('status=booked')
+    expect(q).toContain('q=jean')
+    expect(q).toContain('category=B')
   })
 })
