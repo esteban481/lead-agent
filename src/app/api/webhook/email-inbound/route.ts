@@ -10,7 +10,7 @@ import { logger, errContext } from '@/lib/logger'
 import { parseLeadMessage } from '@/lib/ai/parse'
 import { detectIntent } from '@/lib/ai/intent'
 import { scoreLead } from '@/lib/ai/score'
-import { decideNextAction } from '@/lib/ai/decide'
+import { decideNextAction, isQualificationComplete } from '@/lib/ai/decide'
 import {
   generateQualificationEmail,
   generateBookingEmail,
@@ -237,20 +237,15 @@ export async function POST(req: NextRequest) {
       .update({ status: 'qualifying', last_error: null })
       .eq('id', lead.id)
 
-    // 8. Vérifier si toutes les questions sont répondues
-    const requiredKeys = new Set(
-      typedClient.config.qualification_questions.map((q) => q.key)
-    )
-    const answeredKeys = new Set(allAnswers.map((a) => a.question_key))
-    const allAnswered = [...requiredKeys].every((k) => answeredKeys.has(k))
+    // 8. Vérifier si toutes les questions sont répondues (complétude déterministe)
+    const allAnswered = isQualificationComplete(allAnswers, typedClient.config)
 
     if (allAnswered) {
       // 9a. Toutes les infos collectées → score + décision
       await supabase.from('leads').update({ status: 'scoring' }).eq('id', lead.id)
 
       const scoreResult = await scoreLead(lead, allAnswers, typedClient.config, typedClient.sector)
-      // On force missing_fields à [] car on sait que toutes les questions sont répondues
-      const decision = decideNextAction(lead, { ...scoreResult, missing_fields: [] }, allAnswers, typedClient.config)
+      const decision = decideNextAction(lead, scoreResult, allAnswers, typedClient.config)
 
       await supabase
         .from('leads')

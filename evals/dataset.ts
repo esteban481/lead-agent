@@ -210,10 +210,10 @@ export const scoringCases: ScoringCase[] = [
     scoreRange: [55, 74],
   }),
 
-  // --- Gaps connus : ce que le barème actuel NE sait pas encore faire.
-  //     Ces cas révèlent les prochaines améliorations produit. ---
+  // --- Disqualifiants durs : hors zone / type de projet refusé → D d'office,
+  //     quel que soit le score de fit (le score reste affiché pour transparence). ---
   scoringCase({
-    name: 'GAP — hors zone (Marseille) mais lead parfait',
+    name: 'Hors zone (Marseille) → disqualifié malgré un fit parfait',
     message:
       "Installation PAC air/eau pour remplacer ma chaudière fioul, projet urgent le mois prochain, budget 15 000 €.",
     contact: { name: 'Paul Girard', email: 'paul.girard@gmail.com', phone: '0611223344' },
@@ -226,12 +226,10 @@ export const scoringCases: ScoringCase[] = [
     },
     expectCategory: 'D',
     expectAction: 'disqualify',
-    scoreRange: [0, 24],
-    knownGap:
-      "Hors zone mais tous les autres critères au max → scoré comme un lead chaud. Le barème n'a pas de disqualifiant géographique dur.",
+    scoreRange: [0, 100], // fit fort mais disqualifié : le score n'est pas le critère
   }),
   scoringCase({
-    name: 'GAP — dépannage (type refusé) en zone',
+    name: 'Dépannage (type refusé) en zone → disqualifié',
     message:
       "Ma chaudière est tombée en panne, j'ai besoin d'un dépannage rapide, pouvez-vous intervenir vite ?",
     contact: { name: 'Claire Dubois', email: 'claire.dubois@gmail.com', phone: '0677889900' },
@@ -244,9 +242,7 @@ export const scoringCases: ScoringCase[] = [
     },
     expectCategory: 'D',
     expectAction: 'disqualify',
-    scoreRange: [0, 24],
-    knownGap:
-      "Demande de dépannage (type de projet refusé) mais les points de zone/surface/contact suffisent à éviter la disqualification.",
+    scoreRange: [0, 100],
   }),
 ]
 

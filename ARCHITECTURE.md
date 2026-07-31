@@ -117,8 +117,9 @@ Ex : `{ type_logement: "maison", surface: "120m2" }`
 
 ### `scoreLead(lead, answers, config)`
 Calcule un score sur 100 selon les critères du client.
-Retourne : `{ score, category, details, summary, missing_fields }`
+Retourne : `{ score, category, details, summary, missing_fields, disqualified_reason }`
 **Répartition des rôles** : Claude attribue des points par critère (température 0), le **code** somme, clampe chaque critère à son poids et dérive la catégorie via les seuils. Garantit `score = somme(details)` et une catégorie cohérente, indépendamment de l'arithmétique du LLM. Helpers purs testés : `computeScore`, `categoryFromScore`.
+**Disqualifiants durs** : Claude juge deux booléens (`out_of_zone`, `rejected_project`) et le **code** force la catégorie `D` + renseigne `disqualified_reason` si l'un est vrai — un lead hors zone ou d'un type refusé ne peut pas passer en A/B via le seul cumul de points (le score de fit reste affiché pour transparence).
 
 ### `generateQualificationEmail / generateRelanceEmail / generateBookingEmail / generateDisqualificationEmail`
 Génère le bon email selon le contexte. Toujours en JSON `{ subject, body }`.
@@ -126,7 +127,8 @@ Génère le bon email selon le contexte. Toujours en JSON `{ subject, body }`.
 
 ### `decideNextAction(lead, score, answers, config)`
 **Logique déterministe — pas de Claude ici.**
-- missing_fields > 0 → `ask_next_question`
+- `disqualified_reason` présent → `disqualify` (disqualifiant dur, en premier)
+- qualification incomplète → `ask_next_question` — complétude **déterministe** via `isQualificationComplete(answers, config)` (toutes les questions de la config ont une réponse), et **non** le `missing_fields` de Claude (peu fiable)
 - category D → `disqualify`
 - category A ou B → `send_booking_link`
 - category C → `send_gentle_followup`

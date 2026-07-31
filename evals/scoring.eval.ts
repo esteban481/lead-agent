@@ -7,10 +7,12 @@ import { scoringCases, evalConfig, evalSector } from './dataset'
 // Eval — scoring + décision.
 //
 // Fait passer chaque lead labellisé dans le VRAI pipeline
-// (scoreLead → decideNextAction) et compare à l'attendu.
-// Métrique de garde : les cas "cœur" (leads en cible) doivent
-// majoritairement aboutir à la bonne action. Les cas "gap" sont
-// affichés mais ne bloquent pas — ils documentent les limites.
+// (scoreLead → decideNextAction) et compare à l'ACTION attendue.
+//
+// On juge sur l'ACTION (le comportement du produit : booker /
+// disqualifier / relancer / re-questionner), pas sur la catégorie :
+// la frontière A/B est floue et sans effet comportemental (A comme B
+// déclenchent un booking). La catégorie reste affichée pour l'œil.
 //
 // Skip automatique si ANTHROPIC_API_KEY est absente (aucun coût).
 // ============================================================
@@ -23,7 +25,7 @@ describe.skipIf(!HAS_KEY)('eval — scoring & décision', () => {
     for (const c of scoringCases) {
       const score = await scoreLead(c.lead, c.answers, evalConfig, evalSector)
       const decision = decideNextAction(c.lead, score, c.answers, evalConfig)
-      const pass = decision.action === c.expectAction && score.category === c.expectCategory
+      const pass = decision.action === c.expectAction
       results.push({ c, score, decision, pass })
     }
 
@@ -31,33 +33,31 @@ describe.skipIf(!HAS_KEY)('eval — scoring & décision', () => {
     console.table(
       results.map((r) => ({
         cas: r.c.name,
-        'cat.': r.score.category,
-        att: r.c.expectCategory,
+        'cat. (indic.)': r.score.category,
         score: r.score.score,
         action: r.decision.action,
-        'action att.': r.c.expectAction,
-        statut: r.c.knownGap ? (r.pass ? '✅ résolu' : '⚠️ gap') : r.pass ? '✅' : '❌',
+        'action attendue': r.c.expectAction,
+        statut: r.pass ? '✅' : '❌',
       }))
     )
 
-    const core = results.filter((r) => !r.c.knownGap)
-    const corePassed = core.filter((r) => r.pass).length
-    const accuracy = corePassed / core.length
+    const passed = results.filter((r) => r.pass).length
+    const accuracy = passed / results.length
 
     // eslint-disable-next-line no-console
     console.log(
-      `\nScoring — cas cœur : ${corePassed}/${core.length} corrects (${Math.round(accuracy * 100)} %)`
+      `\nScoring — action correcte : ${passed}/${results.length} (${Math.round(accuracy * 100)} %)`
     )
 
-    for (const r of results.filter((r) => r.c.knownGap && !r.pass)) {
+    for (const r of results.filter((r) => !r.pass)) {
       // eslint-disable-next-line no-console
       console.log(
-        `⚠️  Gap : « ${r.c.name} » → attendu ${r.c.expectAction}/${r.c.expectCategory}, ` +
-          `obtenu ${r.decision.action}/${r.score.category} (score ${r.score.score}). ${r.c.knownGap}`
+        `❌ « ${r.c.name} » → attendu ${r.c.expectAction}, ` +
+          `obtenu ${r.decision.action} (cat ${r.score.category}, score ${r.score.score})`
       )
     }
 
-    // Garde-fou souple : on tolère un peu de bruit LLM sur les cas cœur.
-    expect(accuracy).toBeGreaterThanOrEqual(0.75)
+    // Garde-fou souple : on tolère un peu de bruit LLM.
+    expect(accuracy).toBeGreaterThanOrEqual(0.85)
   })
 })
