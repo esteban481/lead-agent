@@ -9,6 +9,7 @@ npm run dev       # démarrer en local → http://localhost:3000
 npm run build     # build production (vérifie les types TypeScript)
 npm run lint      # linter ESLint
 npm test          # tests (vitest) — logique pure, webhooks, routes API, composants React (jsdom)
+npm run eval      # evals IA (qualité du jugement Claude) — appels API réels, hors CI, voir evals/README.md
 vercel --prod     # déployer en production
 ```
 
