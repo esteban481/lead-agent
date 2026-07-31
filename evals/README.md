@@ -25,27 +25,29 @@ npm run eval
 | Fichier | Rôle |
 |---|---|
 | `dataset.ts` | Cas labellisés (résultat attendu écrit à la main). L'actif durable. |
-| `scoring.eval.ts` | `scoreLead` → `decideNextAction` : catégorie + action attendues. |
+| `scoring.eval.ts` | `scoreLead` → `decideNextAction` : **action** attendue. |
 | `intent.eval.ts` | `detectIntent` : opt-out / pas intéressé / réponse. |
 
-## Cas « cœur » vs « gap »
+## On juge sur l'action, pas sur la catégorie
 
-- **Cœur** : leads en cible que le produit doit bien traiter. Ils gouvernent la
-  garde (précision minimale exigée).
-- **Gap** (`knownGap`) : cas que le barème actuel ne sait **pas encore** gérer.
-  Ils sont affichés dans le rapport pour documenter la prochaine amélioration —
-  ils ne font pas échouer le run. Quand un futur changement les fait passer,
-  le rapport affiche « ✅ résolu ».
+Le critère de réussite d'un cas de scoring est l'**action** décidée (booker /
+disqualifier / relancer en douceur / re-questionner) — c'est le comportement
+réel du produit. La catégorie A/B/C/D est affichée à titre indicatif mais **non
+assertée** : la frontière A/B est floue et sans effet (A comme B déclenchent un
+booking + une alerte). Juger sur l'action rend l'eval robuste au bruit du LLM.
 
-### Gaps connus aujourd'hui
+### Ce que l'eval a déjà fait bouger
 
-Le barème additionne des points sans **disqualifiant dur**. Conséquence :
+Le premier run a révélé deux défauts, corrigés depuis :
 
-- un lead **hors zone** mais parfait par ailleurs est scoré comme un lead chaud ;
-- une demande d'un **type de projet refusé** (dépannage) n'est pas disqualifiée.
+1. `decideNextAction` se fiait au `missing_fields` de Claude (peu fiable) →
+   rendu **déterministe** via `isQualificationComplete(answers, config)`.
+2. Le barème additif laissait passer en A/B des leads **hors zone** ou d'un
+   **type de projet refusé** → ajout de **disqualifiants durs** (`out_of_zone`,
+   `rejected_project` jugés par Claude, catégorie D forcée par le code).
 
-Prochaine itération naturelle : ajouter des disqualifiants durs (zone / type de
-projet) et re-lancer l'eval pour prouver le gain.
+Le champ `knownGap` (dans `dataset.ts`) reste disponible pour documenter un futur
+cas que le produit ne sait pas encore traiter, sans faire échouer le run.
 
 ## Étendre le dataset
 

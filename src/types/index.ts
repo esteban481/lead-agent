@@ -180,6 +180,9 @@ export interface ScoreResult {
   details: Record<string, number>
   summary: string
   missing_fields: string[]
+  // Disqualifiant dur (hors zone / type de projet refusé). Null si en cible.
+  // Quand renseigné : catégorie forcée à 'D' et décision = disqualify.
+  disqualified_reason?: string | null
 }
 
 export type NextAction =

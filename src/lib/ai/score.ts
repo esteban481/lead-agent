@@ -75,6 +75,10 @@ Types de projets refusés : ${config.rejected_project_types.join(', ')}
 Attribue à chaque critère un nombre de points ENTIER dans sa limite (ne dépasse jamais le maximum) :
 ${weightsText}
 
+Évalue aussi deux disqualifiants DURS (indépendants du score) :
+- out_of_zone : true si l'adresse / le code postal du prospect n'est PAS dans la zone couverte, sinon false.
+- rejected_project : true si la demande correspond à un type de projet REFUSÉ (et non à un type accepté), sinon false.
+
 Ne calcule NI le total NI la catégorie : on s'en charge. Donne aussi un court résumé
 (2-3 phrases) pour le commercial et la liste des champs encore manquants.
 
@@ -89,6 +93,8 @@ Réponds UNIQUEMENT avec ce JSON valide :
     "message_quality": <points>,
     "contact_reachable": <points>
   },
+  "out_of_zone": <true|false>,
+  "rejected_project": <true|false>,
   "summary": "<résumé pour le commercial>",
   "missing_fields": [<liste des champs encore manquants>]
 }
@@ -104,11 +110,24 @@ JSON:`
       details?: Record<string, number>
       summary?: string
       missing_fields?: string[]
+      out_of_zone?: boolean
+      rejected_project?: boolean
     }
 
     // Le code reprend la main sur l'arithmétique et la catégorie
     const { score, details } = computeScore(parsed.details ?? {}, config.scoring_weights)
-    const category = categoryFromScore(score, config.score_threshold_hot)
+
+    // Disqualifiants durs : Claude juge (booléens), le code décide.
+    // Un lead hors zone ou d'un type refusé est mis en 'D' quel que soit le
+    // score de fit — sinon le barème additif le laissait passer en A/B.
+    const reasons: string[] = []
+    if (parsed.out_of_zone) reasons.push('hors zone couverte')
+    if (parsed.rejected_project) reasons.push('type de projet non pris en charge')
+    const disqualified_reason = reasons.length > 0 ? reasons.join(' + ') : null
+
+    const category = disqualified_reason
+      ? 'D'
+      : categoryFromScore(score, config.score_threshold_hot)
 
     return {
       score,
@@ -116,6 +135,7 @@ JSON:`
       details,
       summary: parsed.summary ?? '',
       missing_fields: parsed.missing_fields ?? [],
+      disqualified_reason,
     }
   } catch {
     // Fallback si Claude retourne quelque chose d'inattendu
@@ -125,6 +145,7 @@ JSON:`
       details: {},
       summary: 'Erreur lors du scoring — vérification manuelle requise.',
       missing_fields: [],
+      disqualified_reason: null,
     }
   }
 }
